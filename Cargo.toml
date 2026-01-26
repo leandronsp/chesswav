@@ -1,0 +1,18 @@
+[package]
+name = "chesswav"
+version = "0.1.0"
+edition = "2021"
+description = "Transform chess games into audio"
+license = "MIT"
+
+[lib]
+name = "chesswav"
+path = "src/lib.rs"
+
+[[bin]]
+name = "chesswav"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+strip = true

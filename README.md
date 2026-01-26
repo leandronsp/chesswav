@@ -2,17 +2,23 @@
 
 Transform chess games into audio. Each move becomes a note.
 
+## Installation
+
+```bash
+cargo build --release
+```
+
 ## Usage
 
 ```bash
 # Pipe moves to stdout
-echo "e4 e5 Nf3 Nc6" | ./chesswav > game.wav
+echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav > game.wav
 
 # Play directly
-echo "e4 e5 Nf3 Nc6" | ./chesswav --play
+echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav --play
 
-# Or with process substitution
-afplay <(echo "e4 e5 Nf3 Nc6" | ./chesswav)
+# From file
+./target/release/chesswav < moves.txt > output.wav
 ```
 
 ## How it works
@@ -39,30 +45,29 @@ Higher ranks = higher octaves. `e5` is an octave above `e4`.
 ## Project Structure
 
 ```
-chesswav              # Main executable
-lib/
-├── board.sh          # Board representation
-├── notation.sh       # Algebraic notation parser
-├── freq.sh           # Square to frequency mapping
-├── synth.sh          # Sine wave generator
-└── wav.sh            # WAV file output
+src/
+├── main.rs        # CLI entry point
+├── lib.rs         # Library exports
+├── types.rs       # Shared domain types (PieceKind, Color, Square)
+├── audio.rs       # Audio constants and generation
+├── board.rs       # Board representation
+├── notation.rs    # Algebraic notation parser
+├── freq.rs        # Square to frequency mapping
+├── synth.rs       # Sine wave generator
+└── wav.rs         # WAV file output
 tests/
-├── test_*.sh         # Unit tests per module
-└── run_all.sh        # Test runner
-docs/
-├── prd/mvp.md        # Product requirements
-└── spec/mvp.md       # Technical specification
+└── integration.rs # End-to-end tests
 ```
 
 ## Testing
 
 ```bash
-./tests/run_all.sh
+cargo test
 ```
 
 ## Requirements
 
-- Bash 3.2+ (macOS default works)
+- Rust 1.70+
 - No external dependencies
 
 ## Roadmap
@@ -72,7 +77,6 @@ See [ROADMAP.md](ROADMAP.md) for future features:
 - Castling and en passant
 - PGN file parsing
 - ADSR envelope
-- Interactive mode
 
 ## License
 
