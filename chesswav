@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$SCRIPT_DIR/lib/board.sh"
+source "$SCRIPT_DIR/lib/notation.sh"
+source "$SCRIPT_DIR/lib/freq.sh"
+source "$SCRIPT_DIR/lib/synth.sh"
+source "$SCRIPT_DIR/lib/wav.sh"
+
+DURATION_MS=300
+SILENCE_MS=50
+PLAY_AUDIO=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --play|-p) PLAY_AUDIO=1; shift ;;
+        *) shift ;;
+    esac
+done
+
+main() {
+    board_init
+
+    local tmpfile=$(mktemp)
+    local sample_count=0
+
+    while read -r line; do
+        for move in $line; do
+            [[ -z "$move" ]] && continue
+
+            if ! notation_parse "$move"; then
+                echo "Warning: could not parse move '$move'" >&2
+                continue
+            fi
+
+            local freq=$(freq_from_square "$NOTATION_DEST")
+            synth_sine "$freq" "$DURATION_MS" >> "$tmpfile"
+            sample_count=$(( sample_count + SYNTH_SAMPLE_RATE * DURATION_MS / 1000 ))
+
+            # Add silence between notes
+            local silence_samples=$(( SYNTH_SAMPLE_RATE * SILENCE_MS / 1000 ))
+            for ((s=0; s<silence_samples; s++)); do
+                printf '\x00\x00' >> "$tmpfile"
+            done
+            sample_count=$(( sample_count + silence_samples ))
+        done
+    done
+
+    if [[ $PLAY_AUDIO -eq 1 ]]; then
+        local wavfile=$(mktemp).wav
+        wav_header "$sample_count" > "$wavfile"
+        cat "$tmpfile" >> "$wavfile"
+        rm -f "$tmpfile"
+        afplay "$wavfile"
+        rm -f "$wavfile"
+    else
+        wav_header "$sample_count"
+        cat "$tmpfile"
+        rm -f "$tmpfile"
+    fi
+}
+
+main
