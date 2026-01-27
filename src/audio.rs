@@ -1,4 +1,5 @@
-use crate::{freq, notation, synth, wav};
+use crate::chess::Move;
+use crate::{freq, synth, wav};
 
 pub const SAMPLE_RATE: u32 = 44100;
 pub const BITS_PER_SAMPLE: u16 = 16;
@@ -12,7 +13,7 @@ pub fn generate(moves: &str) -> Vec<i16> {
 
     for line in moves.lines() {
         for mov in line.split_whitespace() {
-            if let Some(parsed) = notation::parse(mov) {
+            if let Some(parsed) = Move::parse(mov) {
                 let freq = freq::from_square(&parsed.dest);
                 let mut note_samples = synth::sine(freq, NOTE_DURATION_MS);
                 samples.append(&mut note_samples);

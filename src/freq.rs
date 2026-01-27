@@ -1,4 +1,4 @@
-use crate::types::Square;
+use crate::chess::Square;
 
 const BASE_FREQ: [u32; 8] = [
     262, // a -> C
@@ -28,57 +28,64 @@ pub fn from_square(square: &Square) -> u32 {
 mod tests {
     use super::*;
 
-    fn sq(s: &str) -> Square {
-        Square::parse(s).unwrap()
-    }
+    const A2: Square = Square { file: 0, rank: 1 };
+    const A3: Square = Square { file: 0, rank: 2 };
+    const A4: Square = Square { file: 0, rank: 3 };
+    const A5: Square = Square { file: 0, rank: 4 };
+    const A6: Square = Square { file: 0, rank: 5 };
+    const B4: Square = Square { file: 1, rank: 3 };
+    const E4: Square = Square { file: 4, rank: 3 };
+    const F4: Square = Square { file: 5, rank: 3 };
+    const G4: Square = Square { file: 6, rank: 3 };
+    const H4: Square = Square { file: 7, rank: 3 };
 
     #[test]
     fn a4_c4() {
-        assert_eq!(from_square(&sq("a4")), 262);
+        assert_eq!(from_square(&A4), 262);
     }
 
     #[test]
     fn f4_a4() {
-        assert_eq!(from_square(&sq("f4")), 440);
+        assert_eq!(from_square(&F4), 440);
     }
 
     #[test]
     fn e4_g4() {
-        assert_eq!(from_square(&sq("e4")), 392);
+        assert_eq!(from_square(&E4), 392);
     }
 
     #[test]
     fn b4_d4() {
-        assert_eq!(from_square(&sq("b4")), 294);
+        assert_eq!(from_square(&B4), 294);
     }
 
     #[test]
     fn g4_b4() {
-        assert_eq!(from_square(&sq("g4")), 494);
+        assert_eq!(from_square(&G4), 494);
     }
 
     #[test]
     fn h4_c5() {
-        assert_eq!(from_square(&sq("h4")), 523);
+        assert_eq!(from_square(&H4), 523);
     }
 
     #[test]
     fn octave_up_a5() {
-        assert_eq!(from_square(&sq("a5")), 524);
+        assert_eq!(from_square(&A5), 524);
     }
 
     #[test]
     fn octave_down_a3() {
-        assert_eq!(from_square(&sq("a3")), 131);
+        assert_eq!(from_square(&A3), 131);
     }
 
     #[test]
     fn two_octaves_up() {
-        assert_eq!(from_square(&sq("a6")), 1048);
+        assert_eq!(from_square(&A6), 1048);
     }
 
     #[test]
     fn two_octaves_down() {
-        assert_eq!(from_square(&sq("a2")), 65);
+        assert_eq!(from_square(&A2), 65);
     }
 }

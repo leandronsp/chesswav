@@ -1,10 +1,9 @@
-use crate::types::{Color, PieceKind, Square};
+use crate::chess::{Color, Piece, PieceKind, Square};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Piece {
-    pub kind: PieceKind,
-    pub color: Color,
-}
+const RANK_1: usize = 0;
+const RANK_2: usize = 8;
+const RANK_7: usize = 48;
+const RANK_8: usize = 56;
 
 pub struct Board {
     squares: [Option<Piece>; 64],
@@ -26,13 +25,13 @@ impl Board {
         ];
 
         for (file, &kind) in back_rank.iter().enumerate() {
-            squares[file] = Some(Piece { kind, color: Color::White });
-            squares[56 + file] = Some(Piece { kind, color: Color::Black });
+            squares[RANK_1 + file] = Some(Piece { kind, color: Color::White });
+            squares[RANK_8 + file] = Some(Piece { kind, color: Color::Black });
         }
 
         for file in 0..8 {
-            squares[8 + file] = Some(Piece { kind: PieceKind::Pawn, color: Color::White });
-            squares[48 + file] = Some(Piece { kind: PieceKind::Pawn, color: Color::Black });
+            squares[RANK_2 + file] = Some(Piece { kind: PieceKind::Pawn, color: Color::White });
+            squares[RANK_7 + file] = Some(Piece { kind: PieceKind::Pawn, color: Color::Black });
         }
 
         Board { squares }
@@ -57,14 +56,23 @@ impl Default for Board {
 mod tests {
     use super::*;
 
-    fn sq(s: &str) -> Square {
-        Square::parse(s).unwrap()
-    }
+    const A1: Square = Square { file: 0, rank: 0 };
+    const B1: Square = Square { file: 1, rank: 0 };
+    const C1: Square = Square { file: 2, rank: 0 };
+    const D1: Square = Square { file: 3, rank: 0 };
+    const E1: Square = Square { file: 4, rank: 0 };
+    const E2: Square = Square { file: 4, rank: 1 };
+    const E4: Square = Square { file: 4, rank: 3 };
+    const D5: Square = Square { file: 3, rank: 4 };
+    const E7: Square = Square { file: 4, rank: 6 };
+    const A8: Square = Square { file: 0, rank: 7 };
+    const D8: Square = Square { file: 3, rank: 7 };
+    const E8: Square = Square { file: 4, rank: 7 };
 
     #[test]
     fn init_white_king() {
         let b = Board::new();
-        let p = b.get(&sq("e1")).unwrap();
+        let p = b.get(&E1).unwrap();
         assert_eq!(p.kind, PieceKind::King);
         assert_eq!(p.color, Color::White);
     }
@@ -72,7 +80,7 @@ mod tests {
     #[test]
     fn init_white_queen() {
         let b = Board::new();
-        let p = b.get(&sq("d1")).unwrap();
+        let p = b.get(&D1).unwrap();
         assert_eq!(p.kind, PieceKind::Queen);
         assert_eq!(p.color, Color::White);
     }
@@ -80,7 +88,7 @@ mod tests {
     #[test]
     fn init_white_rook() {
         let b = Board::new();
-        let p = b.get(&sq("a1")).unwrap();
+        let p = b.get(&A1).unwrap();
         assert_eq!(p.kind, PieceKind::Rook);
         assert_eq!(p.color, Color::White);
     }
@@ -88,7 +96,7 @@ mod tests {
     #[test]
     fn init_white_knight() {
         let b = Board::new();
-        let p = b.get(&sq("b1")).unwrap();
+        let p = b.get(&B1).unwrap();
         assert_eq!(p.kind, PieceKind::Knight);
         assert_eq!(p.color, Color::White);
     }
@@ -96,7 +104,7 @@ mod tests {
     #[test]
     fn init_white_bishop() {
         let b = Board::new();
-        let p = b.get(&sq("c1")).unwrap();
+        let p = b.get(&C1).unwrap();
         assert_eq!(p.kind, PieceKind::Bishop);
         assert_eq!(p.color, Color::White);
     }
@@ -104,7 +112,7 @@ mod tests {
     #[test]
     fn init_white_pawn() {
         let b = Board::new();
-        let p = b.get(&sq("e2")).unwrap();
+        let p = b.get(&E2).unwrap();
         assert_eq!(p.kind, PieceKind::Pawn);
         assert_eq!(p.color, Color::White);
     }
@@ -112,7 +120,7 @@ mod tests {
     #[test]
     fn init_black_king() {
         let b = Board::new();
-        let p = b.get(&sq("e8")).unwrap();
+        let p = b.get(&E8).unwrap();
         assert_eq!(p.kind, PieceKind::King);
         assert_eq!(p.color, Color::Black);
     }
@@ -120,7 +128,7 @@ mod tests {
     #[test]
     fn init_black_queen() {
         let b = Board::new();
-        let p = b.get(&sq("d8")).unwrap();
+        let p = b.get(&D8).unwrap();
         assert_eq!(p.kind, PieceKind::Queen);
         assert_eq!(p.color, Color::Black);
     }
@@ -128,7 +136,7 @@ mod tests {
     #[test]
     fn init_black_rook() {
         let b = Board::new();
-        let p = b.get(&sq("a8")).unwrap();
+        let p = b.get(&A8).unwrap();
         assert_eq!(p.kind, PieceKind::Rook);
         assert_eq!(p.color, Color::Black);
     }
@@ -136,7 +144,7 @@ mod tests {
     #[test]
     fn init_black_pawn() {
         let b = Board::new();
-        let p = b.get(&sq("e7")).unwrap();
+        let p = b.get(&E7).unwrap();
         assert_eq!(p.kind, PieceKind::Pawn);
         assert_eq!(p.color, Color::Black);
     }
@@ -144,23 +152,23 @@ mod tests {
     #[test]
     fn empty_square() {
         let b = Board::new();
-        assert!(b.get(&sq("e4")).is_none());
-        assert!(b.get(&sq("d5")).is_none());
+        assert!(b.get(&E4).is_none());
+        assert!(b.get(&D5).is_none());
     }
 
     #[test]
     fn set_piece() {
         let mut b = Board::new();
         let pawn = Piece { kind: PieceKind::Pawn, color: Color::White };
-        b.set(&sq("e4"), Some(pawn));
-        let p = b.get(&sq("e4")).unwrap();
+        b.set(&E4, Some(pawn));
+        let p = b.get(&E4).unwrap();
         assert_eq!(p.kind, PieceKind::Pawn);
     }
 
     #[test]
     fn clear_square() {
         let mut b = Board::new();
-        b.set(&sq("e2"), None);
-        assert!(b.get(&sq("e2")).is_none());
+        b.set(&E2, None);
+        assert!(b.get(&E2).is_none());
     }
 }
