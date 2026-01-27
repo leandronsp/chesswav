@@ -2,6 +2,14 @@
 
 Transform chess games into audio. Each move becomes a note.
 
+
+
+https://github.com/user-attachments/assets/837ae999-e6b3-4f3d-a724-1cf0ae06d68e
+
+
+
+
+
 ## Quick Start
 
 ```bash
