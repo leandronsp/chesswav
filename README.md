@@ -2,23 +2,59 @@
 
 Transform chess games into audio. Each move becomes a note.
 
+## Quick Start
+
+```bash
+# Generate WAV file
+echo "e4 e5 Nf3 Nc6" | cargo run --release > game.wav
+
+# Play audio directly (macOS/Linux)
+echo "e4 e5 Nf3 Nc6" | cargo run --release -- --play
+```
+
 ## Installation
 
 ```bash
+# Build only
 cargo build --release
+
+# Install globally (adds `chesswav` to PATH)
+cargo install --path .
 ```
 
 ## Usage
 
+### With cargo run
+
 ```bash
-# Pipe moves to stdout
-echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav > game.wav
+# Generate WAV to file
+echo "e4 e5 Nf3 Nc6" | cargo run --release > game.wav
 
 # Play directly
-echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav --play
+echo "e4 e5 Nf3 Nc6" | cargo run --release -- --play
+echo "e4 e5 Nf3 Nc6" | cargo run --release -- -p
 
 # From file
-./target/release/chesswav < moves.txt > output.wav
+cargo run --release < moves.txt > output.wav
+```
+
+### After installation
+
+```bash
+# Generate WAV to file
+echo "e4 e5 Nf3 Nc6" | chesswav > game.wav
+
+# Play directly
+echo "e4 e5 Nf3 Nc6" | chesswav --play
+
+# From file
+chesswav < moves.txt > output.wav
+```
+
+### Using binary directly
+
+```bash
+echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav > game.wav
 ```
 
 ## How it works
@@ -46,17 +82,16 @@ Higher ranks = higher octaves. `e5` is an octave above `e4`.
 
 ```
 src/
-├── main.rs        # CLI entry point
-├── lib.rs         # Library exports
-├── types.rs       # Shared domain types (PieceKind, Color, Square)
-├── audio.rs       # Audio constants and generation
-├── board.rs       # Board representation
-├── notation.rs    # Algebraic notation parser
-├── freq.rs        # Square to frequency mapping
-├── synth.rs       # Sine wave generator
-└── wav.rs         # WAV file output
+├── main.rs      # CLI entry point
+├── lib.rs       # Library exports
+├── chess.rs     # Domain types (Piece, Square, Move, parser)
+├── board.rs     # Board representation
+├── freq.rs      # Square to frequency mapping
+├── synth.rs     # Sine wave generator
+├── wav.rs       # WAV file encoder
+└── audio.rs     # Orchestration (notation → WAV)
 tests/
-└── integration.rs # End-to-end tests
+└── integration.rs
 ```
 
 ## Testing
@@ -67,7 +102,7 @@ cargo test
 
 ## Requirements
 
-- Rust 1.70+
+- Rust 2024 edition (1.85+)
 - No external dependencies
 
 ## Roadmap

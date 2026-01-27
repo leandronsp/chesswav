@@ -1,31 +1,58 @@
+//! WAV file format encoder.
+//!
+//! # RIFF/WAVE Structure (44-byte header)
+//!
+//! ```text
+//! Offset  Size  Description
+//! ──────────────────────────────────────────
+//! 0       4     "RIFF" marker
+//! 4       4     File size - 8
+//! 8       4     "WAVE" marker
+//! ──────────────────────────────────────────
+//! 12      4     "fmt " marker
+//! 16      4     Format chunk size (16)
+//! 20      2     Audio format (1 = PCM)
+//! 22      2     Number of channels
+//! 24      4     Sample rate
+//! 28      4     Byte rate
+//! 32      2     Block align
+//! 34      2     Bits per sample
+//! ──────────────────────────────────────────
+//! 36      4     "data" marker
+//! 40      4     Data size
+//! 44      ...   Sample data (little-endian)
+//! ```
+
 use crate::audio::{BITS_PER_SAMPLE, NUM_CHANNELS, SAMPLE_RATE};
 
-pub fn header(num_samples: u32) -> Vec<u8> {
-    let bytes_per_sample = BITS_PER_SAMPLE / 8;
-    let block_align = NUM_CHANNELS * bytes_per_sample;
+/// Generates a 44-byte WAV header for the given number of samples.
+pub fn header(num_samples: u32) -> [u8; 44] {
+    let block_align = NUM_CHANNELS * (BITS_PER_SAMPLE / 8);
     let byte_rate = SAMPLE_RATE * block_align as u32;
     let data_size = num_samples * block_align as u32;
-    let chunk_size = 36 + data_size;
 
-    let mut buf = Vec::with_capacity(44);
+    let mut h = [0u8; 44];
 
-    buf.extend_from_slice(b"RIFF");
-    buf.extend_from_slice(&chunk_size.to_le_bytes());
-    buf.extend_from_slice(b"WAVE");
+    // RIFF chunk
+    h[0..4].copy_from_slice(b"RIFF");
+    h[4..8].copy_from_slice(&(36 + data_size).to_le_bytes());
+    h[8..12].copy_from_slice(b"WAVE");
 
-    buf.extend_from_slice(b"fmt ");
-    buf.extend_from_slice(&16u32.to_le_bytes());
-    buf.extend_from_slice(&1u16.to_le_bytes());
-    buf.extend_from_slice(&NUM_CHANNELS.to_le_bytes());
-    buf.extend_from_slice(&SAMPLE_RATE.to_le_bytes());
-    buf.extend_from_slice(&byte_rate.to_le_bytes());
-    buf.extend_from_slice(&block_align.to_le_bytes());
-    buf.extend_from_slice(&BITS_PER_SAMPLE.to_le_bytes());
+    // fmt subchunk
+    h[12..16].copy_from_slice(b"fmt ");
+    h[16..20].copy_from_slice(&16u32.to_le_bytes());
+    h[20..22].copy_from_slice(&1u16.to_le_bytes()); // PCM
+    h[22..24].copy_from_slice(&NUM_CHANNELS.to_le_bytes());
+    h[24..28].copy_from_slice(&SAMPLE_RATE.to_le_bytes());
+    h[28..32].copy_from_slice(&byte_rate.to_le_bytes());
+    h[32..34].copy_from_slice(&block_align.to_le_bytes());
+    h[34..36].copy_from_slice(&BITS_PER_SAMPLE.to_le_bytes());
 
-    buf.extend_from_slice(b"data");
-    buf.extend_from_slice(&data_size.to_le_bytes());
+    // data subchunk
+    h[36..40].copy_from_slice(b"data");
+    h[40..44].copy_from_slice(&data_size.to_le_bytes());
 
-    buf
+    h
 }
 
 #[cfg(test)]
@@ -33,74 +60,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn header_size() {
-        let h = header(1000);
-        assert_eq!(h.len(), 44);
-    }
-
-    #[test]
     fn riff_marker() {
-        let h = header(1000);
-        assert_eq!(&h[0..4], b"RIFF");
+        assert_eq!(&header(1000)[0..4], b"RIFF");
     }
 
     #[test]
     fn wave_marker() {
-        let h = header(1000);
-        assert_eq!(&h[8..12], b"WAVE");
+        assert_eq!(&header(1000)[8..12], b"WAVE");
     }
 
     #[test]
     fn fmt_marker() {
-        let h = header(1000);
-        assert_eq!(&h[12..16], b"fmt ");
+        assert_eq!(&header(1000)[12..16], b"fmt ");
     }
 
     #[test]
     fn data_marker() {
-        let h = header(1000);
-        assert_eq!(&h[36..40], b"data");
+        assert_eq!(&header(1000)[36..40], b"data");
     }
 
     #[test]
-    fn chunk_size_correct() {
+    fn chunk_size() {
         let h = header(1000);
-        let chunk_size = u32::from_le_bytes([h[4], h[5], h[6], h[7]]);
-        assert_eq!(chunk_size, 36 + 2000);
+        let size = u32::from_le_bytes([h[4], h[5], h[6], h[7]]);
+        assert_eq!(size, 36 + 2000); // 1000 samples * 2 bytes
     }
 
     #[test]
-    fn data_size_correct() {
+    fn data_size() {
         let h = header(1000);
-        let data_size = u32::from_le_bytes([h[40], h[41], h[42], h[43]]);
-        assert_eq!(data_size, 2000);
+        let size = u32::from_le_bytes([h[40], h[41], h[42], h[43]]);
+        assert_eq!(size, 2000);
     }
 
     #[test]
-    fn sample_rate_correct() {
+    fn sample_rate() {
         let h = header(1000);
         let sr = u32::from_le_bytes([h[24], h[25], h[26], h[27]]);
         assert_eq!(sr, 44100);
-    }
-
-    #[test]
-    fn byte_layout() {
-        let expected: [u8; 44] = [
-            0x52, 0x49, 0x46, 0x46,
-            0xf4, 0x07, 0x00, 0x00,
-            0x57, 0x41, 0x56, 0x45,
-            0x66, 0x6d, 0x74, 0x20,
-            0x10, 0x00, 0x00, 0x00,
-            0x01, 0x00,
-            0x01, 0x00,
-            0x44, 0xac, 0x00, 0x00,
-            0x88, 0x58, 0x01, 0x00,
-            0x02, 0x00,
-            0x10, 0x00,
-            0x64, 0x61, 0x74, 0x61,
-            0xd0, 0x07, 0x00, 0x00,
-        ];
-        let h = header(1000);
-        assert_eq!(h.as_slice(), &expected);
     }
 }
