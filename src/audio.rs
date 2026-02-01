@@ -24,6 +24,7 @@ use crate::{freq, synth, wav};
 // Audio format constants
 pub const SAMPLE_RATE: u32 = 44100;
 pub const BITS_PER_SAMPLE: u16 = 16;
+pub const BYTES_PER_SAMPLE: usize = (BITS_PER_SAMPLE / 8) as usize;
 pub const NUM_CHANNELS: u16 = 1;
 
 // Timing constants
@@ -53,7 +54,7 @@ fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
 
 /// Converts samples to WAV file format.
 pub fn to_wav(samples: &[i16]) -> Vec<u8> {
-    let mut data = Vec::with_capacity(wav::HEADER_SIZE + samples.len() * 2);
+    let mut data = Vec::with_capacity(wav::HEADER_SIZE + samples.len() * BYTES_PER_SAMPLE);
     data.extend_from_slice(&wav::header(samples.len() as u32));
     data.extend(samples.iter().flat_map(|s| s.to_le_bytes()));
     data
@@ -96,6 +97,6 @@ mod tests {
     fn wav_size() {
         let samples = generate("e4");
         let wav = to_wav(&samples);
-        assert_eq!(wav.len(), wav::HEADER_SIZE + samples.len() * 2);
+        assert_eq!(wav.len(), wav::HEADER_SIZE + samples.len() * BYTES_PER_SAMPLE);
     }
 }

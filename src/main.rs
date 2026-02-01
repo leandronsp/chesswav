@@ -24,15 +24,15 @@ use chesswav::audio;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let play_mode = args.iter().any(|a| a == "--play" || a == "-p");
+    let play_mode: bool = args.iter().any(|a| a == "--play" || a == "-p");
 
     // Read chess notation from stdin
     let mut input = String::new();
     io::stdin().read_to_string(&mut input).ok();
 
-    // Generate WAV audio
-    let samples = audio::generate(&input);
-    let wav = audio::to_wav(&samples);
+    // Generate WAV audio (input is e4 e5 Nf3 Nc6 etc.)
+    let samples: Vec<i16> = audio::generate(&input);
+    let wav: Vec<u8> = audio::to_wav(&samples);
 
     if play_mode {
         play(&wav);
