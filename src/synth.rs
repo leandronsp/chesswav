@@ -33,6 +33,22 @@ pub fn sine(freq: u32, duration_ms: u32) -> Vec<i16> {
         .collect()
 }
 
+/// Generates a triangle wave at the given frequency.
+///
+/// Returns a vector of 16-bit samples.
+pub fn triangle(freq: u32, duration_ms: u32) -> Vec<i16> {
+    let num_samples = (SAMPLE_RATE * duration_ms / MS_PER_SECOND) as usize;
+
+    (0..num_samples)
+        .map(|idx| {
+            let t = idx as f64 / SAMPLE_RATE as f64;
+            let phase = (t * freq as f64).fract();
+            let value = 4.0 * (phase - 0.5).abs() - 1.0;
+            (value * AMPLITUDE) as i16
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -62,5 +78,22 @@ mod tests {
     #[test]
     fn different_frequencies_differ() {
         assert_ne!(sine(440, 50), sine(880, 50));
+    }
+
+    #[test]
+    fn triangle_sample_count() {
+        assert_eq!(triangle(440, 100).len(), 4410);
+    }
+
+    #[test]
+    fn triangle_within_amplitude_range() {
+        for &s in &triangle(440, 100) {
+            assert!(s >= i16::MIN && s <= i16::MAX);
+        }
+    }
+
+    #[test]
+    fn triangle_differs_from_sine() {
+        assert_ne!(sine(440, 100), triangle(440, 100));
     }
 }

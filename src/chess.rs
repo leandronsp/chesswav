@@ -8,6 +8,12 @@
 //! Capture: "x", Annotations: "+", "#", "!", "?" (all ignored)
 //! ```
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Piece {
+    Pawn,
+    Knight,
+}
+
 /// A board square with file (column a-h) and rank (row 1-8).
 ///
 /// Internally stored as 0-indexed: file 0-7, rank 0-7.
@@ -47,19 +53,25 @@ impl Square {
 /// A chess move parsed from algebraic notation.
 #[derive(Debug, PartialEq)]
 pub struct Move {
+    pub piece: Piece,
     pub dest: Square,
 }
 
 impl Move {
     /// Parses algebraic notation into a Move.
     /// E.g "Ne4" is parsed into:
-    ///     Move { dest: Square { file: 4, rank: 3 } }
+    ///     Move { piece: Knight, dest: Square { file: 4, rank: 3 } }
     /// Returns `None` for invalid notation.
     pub fn parse(input: &str) -> Option<Move> {
         let clean = Self::strip_annotations(input);
+        let piece = if clean.starts_with('N') {
+            Piece::Knight
+        } else {
+            Piece::Pawn
+        };
         let (file_char, rank_char) = Self::extract_destination(&clean)?;
         let dest = Square::parse(file_char, rank_char)?;
-        Some(Move { dest })
+        Some(Move { piece, dest })
     }
 
     fn strip_annotations(input: &str) -> String {
@@ -88,24 +100,28 @@ mod tests {
     #[test]
     fn move_pawn_e4() {
         let m = Move::parse("e4").unwrap();
+        assert_eq!(m.piece, Piece::Pawn);
         assert_eq!(m.dest, Square { file: 4, rank: 3 });
     }
 
     #[test]
     fn move_knight() {
         let m = Move::parse("Nf3").unwrap();
+        assert_eq!(m.piece, Piece::Knight);
         assert_eq!(m.dest, Square { file: 5, rank: 2 });
     }
 
     #[test]
     fn move_capture() {
         let m = Move::parse("Bxc6").unwrap();
+        assert_eq!(m.piece, Piece::Pawn);
         assert_eq!(m.dest, Square { file: 2, rank: 5 });
     }
 
     #[test]
     fn move_with_annotation() {
         let m = Move::parse("Qh5+").unwrap();
+        assert_eq!(m.piece, Piece::Pawn);
         assert_eq!(m.dest, Square { file: 7, rank: 4 });
     }
 

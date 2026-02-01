@@ -18,7 +18,7 @@
 //! [WAV file bytes]
 //! ```
 
-use crate::chess::Move;
+use crate::chess::{Move, Piece};
 use crate::{freq, synth, wav};
 
 // Audio format constants
@@ -48,7 +48,10 @@ pub fn generate(input: &str) -> Vec<i16> {
 
 fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
     let freq: u32 = freq::from_square(&m.dest);
-    let note: Vec<i16> = synth::sine(freq, NOTE_MS);
+    let note: Vec<i16> = match m.piece {
+        Piece::Pawn => synth::sine(freq, NOTE_MS),
+        Piece::Knight => synth::triangle(freq, NOTE_MS),
+    };
 
     note.into_iter().chain(silence.iter().copied()).collect()
 }
