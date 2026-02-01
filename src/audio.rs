@@ -46,8 +46,8 @@ pub fn generate(input: &str) -> Vec<i16> {
 }
 
 fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
-    let freq = freq::from_square(&m.dest);
-    let note = synth::sine(freq, NOTE_MS);
+    let freq: u32 = freq::from_square(&m.dest);
+    let note: Vec<i16> = synth::sine(freq, NOTE_MS);
 
     note.into_iter().chain(silence.iter().copied()).collect()
 }
@@ -97,6 +97,9 @@ mod tests {
     fn wav_size() {
         let samples = generate("e4");
         let wav = to_wav(&samples);
-        assert_eq!(wav.len(), wav::HEADER_SIZE + samples.len() * BYTES_PER_SAMPLE);
+        assert_eq!(
+            wav.len(),
+            wav::HEADER_SIZE + samples.len() * BYTES_PER_SAMPLE
+        );
     }
 }

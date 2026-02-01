@@ -17,6 +17,33 @@ pub struct Square {
     pub rank: u8, // 0=rank1, 1=rank2, ..., 7=rank8
 }
 
+impl Square {
+    fn parse(file_char: char, rank_char: char) -> Option<Square> {
+        let file = Self::parse_file(file_char)?;
+        let rank = Self::parse_rank(rank_char)?;
+        Some(Square { file, rank })
+    }
+
+    fn parse_file(c: char) -> Option<u8> {
+        Self::validate_file(c)?;
+        Some((c as u8) - b'a')
+    }
+
+    fn parse_rank(c: char) -> Option<u8> {
+        let rank_num = c.to_digit(10)?;
+        Self::validate_rank(rank_num)?;
+        Some((rank_num - 1) as u8)
+    }
+
+    fn validate_file(c: char) -> Option<()> {
+        if ('a'..='h').contains(&c) { Some(()) } else { None }
+    }
+
+    fn validate_rank(rank_num: u32) -> Option<()> {
+        if (1..=8).contains(&rank_num) { Some(()) } else { None }
+    }
+}
+
 /// A chess move parsed from algebraic notation.
 #[derive(Debug, PartialEq)]
 pub struct Move {
@@ -25,41 +52,32 @@ pub struct Move {
 
 impl Move {
     /// Parses algebraic notation into a Move.
-    ///
+    /// E.g "Ne4" is parsed into:
+    ///     Move { dest: Square { file: 4, rank: 3 } }
     /// Returns `None` for invalid notation.
     pub fn parse(input: &str) -> Option<Move> {
-        // Remove annotations and capture marker
-        let s: String = input
+        let clean = Self::strip_annotations(input);
+        let (file_char, rank_char) = Self::extract_destination(&clean)?;
+        let dest = Square::parse(file_char, rank_char)?;
+        Some(Move { dest })
+    }
+
+    fn strip_annotations(input: &str) -> String {
+        input
             .chars()
             .filter(|c| !matches!(c, '+' | '#' | '!' | '?' | 'x'))
-            .collect();
+            .collect()
+    }
 
-        if s.len() < 2 {
-            return None;
-        }
-
-        // Last two chars are destination square
+    fn extract_destination(s: &str) -> Option<(char, char)> {
+        Self::validate_length(s)?;
         let dest_str = &s[s.len() - 2..];
         let mut chars = dest_str.chars();
-        let file_char = chars.next()?;
-        let rank_char = chars.next()?;
+        Some((chars.next()?, chars.next()?))
+    }
 
-        // Validate and convert file (a-h → 0-7)
-        if !('a'..='h').contains(&file_char) {
-            return None;
-        }
-        let file = (file_char as u8) - b'a';
-
-        // Validate and convert rank (1-8 → 0-7)
-        let rank_num = rank_char.to_digit(10)?;
-        if !(1..=8).contains(&rank_num) {
-            return None;
-        }
-        let rank = (rank_num - 1) as u8;
-
-        Some(Move {
-            dest: Square { file, rank },
-        })
+    fn validate_length(s: &str) -> Option<()> {
+        if s.len() >= 2 { Some(()) } else { None }
     }
 }
 
