@@ -11,10 +11,10 @@ https://github.com/user-attachments/assets/a1496a92-6b52-4888-84ab-c3219914cb35
 
 ```bash
 # Generate WAV file
-echo "e4 e5 Nf3 Nc6" | cargo run --release > game.wav
+echo "e4 Nf6 Bb5 Qd8 Rad1 O-O" | cargo run --release > game.wav
 
 # Play audio directly (macOS/Linux)
-echo "e4 e5 Nf3 Nc6" | cargo run --release -- --play
+echo "e4 Nf6 Bb5 Qd8 Rad1 O-O" | cargo run --release -- --play
 ```
 
 ## Installation
@@ -66,7 +66,19 @@ echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav > game.wav
 
 - Columns (a-h) map to notes (C, D, E, F, G, A, B, C)
 - Ranks (1-8) map to octaves (low to high)
-- Each move produces a 300ms sine wave tone
+- Each piece has a distinct timbre (waveform)
+- Castling (`O-O`, `O-O-O`) is supported
+
+### Piece Timbres
+
+| Piece | Waveform | Character |
+|-------|----------|-----------|
+| Pawn | Sine | Pure, simple |
+| Knight | Triangle | Mellow, soft |
+| Rook | Square | Hollow, woody |
+| Bishop | Sawtooth | Bright, buzzy |
+| Queen | Composite (5 harmonics) | Rich, full |
+| King | Harmonics | Warm, noble |
 
 ### Musical Mapping
 
@@ -113,8 +125,9 @@ cargo test
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) for future features:
-- Multiple waveforms per piece type
-- Castling and en passant
+- ~~Multiple waveforms per piece type~~ done
+- ~~Castling~~ done
+- En passant
 - PGN file parsing
 - ADSR envelope
 
