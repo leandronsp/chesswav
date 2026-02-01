@@ -27,6 +27,14 @@
 //!    │ ╱      ╲
 //! -1 │╱        ╲╱
 //!    └─────────────────→ phase
+//!
+//! SAWTOOTH - linear ramp, bright/buzzy
+//!  1 │    ╱│    ╱│
+//!    │   ╱ │   ╱ │
+//!  0 │──╱  │──╱  │
+//!    │ ╱   │ ╱   │
+//! -1 │╱    │╱    │
+//!    └─────────────────→ phase
 //! ```
 //!
 //! # Band-Limited Synthesis
@@ -79,6 +87,13 @@ pub struct Square;
 /// Band-limited: sum of odd harmonics with amplitude 1/n², alternating sign
 #[derive(Clone, Copy)]
 pub struct Triangle;
+
+/// Sawtooth wave - all harmonics, bright/buzzy timbre.
+///
+/// Raw: linear ramp from -1 to +1
+/// Band-limited: sum of ALL harmonics with amplitude 1/n
+#[derive(Clone, Copy)]
+pub struct Sawtooth;
 
 impl Waveform for Sine {
     fn sample(&self, phase: f64) -> f64 {
@@ -137,5 +152,25 @@ impl Waveform for Triangle {
         }
         // Scale factor: 8/π² normalizes amplitude to [-1, 1]
         val * 8.0 / (PI * PI)
+    }
+}
+
+impl Waveform for Sawtooth {
+    /// Raw sawtooth: linear ramp -1 to +1
+    fn sample(&self, phase: f64) -> f64 {
+        let normalized = (phase / (2.0 * PI)).fract();
+        let adjusted = if normalized < 0.0 { normalized + 1.0 } else { normalized };
+        2.0 * adjusted - 1.0
+    }
+
+    /// Band-limited sawtooth using Fourier series:
+    /// f(t) = (-2/π) × Σ sin(n×phase)/n  for n = 1, 2, 3, ...
+    fn sample_band_limited(&self, phase: f64, harmonics: u32) -> f64 {
+        let mut val = 0.0;
+        // ALL harmonics (not just odd like square/triangle)
+        for n in 1..=harmonics {
+            val += (phase * n as f64).sin() / n as f64;
+        }
+        val * -2.0 / PI
     }
 }

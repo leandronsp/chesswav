@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 
 use crate::audio::{MS_PER_SECOND, SAMPLE_RATE};
 use crate::blend::Blend;
-use crate::waveform::{Waveform, Sine, Square, Triangle};
+use crate::waveform::{Waveform, Sine, Square, Triangle, Sawtooth};
 
 const AMPLITUDE: f64 = i16::MAX as f64;
 
@@ -35,6 +35,11 @@ pub fn square(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
 /// Generates a triangle wave with optional blending.
 pub fn triangle(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
     generate(&Triangle, freq, duration_ms, blend)
+}
+
+/// Generates a sawtooth wave with optional blending.
+pub fn sawtooth(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
+    generate(&Sawtooth, freq, duration_ms, blend)
 }
 
 #[cfg(test)]
@@ -100,5 +105,22 @@ mod tests {
     #[test]
     fn square_differs_from_sine() {
         assert_ne!(sine(440, 100), square(440, 100, Blend::none()));
+    }
+
+    #[test]
+    fn sawtooth_sample_count() {
+        assert_eq!(sawtooth(440, 100, Blend::none()).len(), 4410);
+    }
+
+    #[test]
+    fn sawtooth_within_amplitude_range() {
+        for &s in &sawtooth(440, 100, Blend::none()) {
+            assert!(s >= i16::MIN && s <= i16::MAX);
+        }
+    }
+
+    #[test]
+    fn sawtooth_differs_from_sine() {
+        assert_ne!(sine(440, 100), sawtooth(440, 100, Blend::none()));
     }
 }

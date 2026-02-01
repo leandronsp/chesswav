@@ -13,6 +13,7 @@ pub enum Piece {
     Pawn,
     Knight,
     Rook,
+    Bishop,
 }
 
 /// A board square with file (column a-h) and rank (row 1-8).
@@ -69,6 +70,8 @@ impl Move {
             Piece::Knight
         } else if clean.starts_with('R') {
             Piece::Rook
+        } else if clean.starts_with('B') {
+            Piece::Bishop
         } else {
             Piece::Pawn
         };
@@ -117,8 +120,15 @@ mod tests {
     #[test]
     fn move_capture() {
         let m = Move::parse("Bxc6").unwrap();
-        assert_eq!(m.piece, Piece::Pawn);
+        assert_eq!(m.piece, Piece::Bishop);
         assert_eq!(m.dest, Square { file: 2, rank: 5 });
+    }
+
+    #[test]
+    fn move_bishop() {
+        let m = Move::parse("Bb5").unwrap();
+        assert_eq!(m.piece, Piece::Bishop);
+        assert_eq!(m.dest, Square { file: 1, rank: 4 });
     }
 
     #[test]

@@ -53,6 +53,7 @@ fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
         Piece::Pawn => synth::sine(freq, NOTE_MS),
         Piece::Knight => synth::triangle(freq, NOTE_MS, Blend::none()),
         Piece::Rook => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 7)),
+        Piece::Bishop => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.3, 8)),
     };
 
     note.into_iter().chain(silence.iter().copied()).collect()
