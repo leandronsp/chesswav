@@ -26,6 +26,7 @@ pub const SAMPLE_RATE: u32 = 44100;
 pub const BITS_PER_SAMPLE: u16 = 16;
 pub const BYTES_PER_SAMPLE: usize = (BITS_PER_SAMPLE / 8) as usize;
 pub const NUM_CHANNELS: u16 = 1;
+pub const MS_PER_SECOND: u32 = 1000;
 
 // Timing constants
 const NOTE_MS: u32 = 300;
@@ -36,7 +37,7 @@ const SILENCE_MS: u32 = 50;
 pub fn generate(input: &str) -> Vec<i16> {
     // Generates silence samples for the specified duration.
     // E.g vec![0, 0, 0, ...] for 50 ms.
-    let silence: Vec<i16> = vec![0; (SAMPLE_RATE * SILENCE_MS / 1000) as usize];
+    let silence: Vec<i16> = vec![0; (SAMPLE_RATE * SILENCE_MS / MS_PER_SECOND) as usize];
 
     input
         .split_whitespace()
@@ -64,7 +65,7 @@ pub fn to_wav(samples: &[i16]) -> Vec<u8> {
 mod tests {
     use super::*;
 
-    const SAMPLES_PER_MOVE: usize = (SAMPLE_RATE * (NOTE_MS + SILENCE_MS) / 1000) as usize;
+    const SAMPLES_PER_MOVE: usize = (SAMPLE_RATE * (NOTE_MS + SILENCE_MS) / MS_PER_SECOND) as usize;
 
     #[test]
     fn empty_input() {

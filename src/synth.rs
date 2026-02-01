@@ -3,34 +3,33 @@
 //! # Sine Wave Formula
 //!
 //! ```text
-//! sample[i] = AMPLITUDE × sin(2π × frequency × i / SAMPLE_RATE)
+//! sample[idx] = AMPLITUDE × sin(2π × frequency × idx / SAMPLE_RATE)
 //!
 //!   Amplitude
-//!      28000 │      ╭─╮      ╭─╮
+//!      32767 │      ╭─╮      ╭─╮
 //!            │    ╭╯   ╰╮  ╭╯   ╰╮
 //!          0 │───╯       ╰╯       ╰───
 //!            │
-//!     -28000 │
+//!     -32767 │
 //!            └────────────────────────→ time
 //!                 │← 1 cycle →│
 //! ```
 
 use std::f64::consts::PI;
 
-use crate::audio::SAMPLE_RATE;
+use crate::audio::{MS_PER_SECOND, SAMPLE_RATE};
 
-/// ~85% of i16::MAX to avoid clipping
-const AMPLITUDE: f64 = 28000.0;
+const AMPLITUDE: f64 = i16::MAX as f64;
 
 /// Generates a sine wave at the given frequency.
 ///
 /// Returns a vector of 16-bit samples.
 pub fn sine(freq: u32, duration_ms: u32) -> Vec<i16> {
-    let num_samples = (SAMPLE_RATE * duration_ms / 1000) as usize;
+    let num_samples = (SAMPLE_RATE * duration_ms / MS_PER_SECOND) as usize;
     let angular_freq = 2.0 * PI * freq as f64 / SAMPLE_RATE as f64;
 
     (0..num_samples)
-        .map(|i| (AMPLITUDE * (angular_freq * i as f64).sin()) as i16)
+        .map(|idx| (AMPLITUDE * (angular_freq * idx as f64).sin()) as i16)
         .collect()
 }
 
@@ -51,7 +50,7 @@ mod tests {
     #[test]
     fn samples_within_amplitude_range() {
         for &s in &sine(440, 100) {
-            assert!(s >= -28000 && s <= 28000);
+            assert!(s >= i16::MIN && s <= i16::MAX);
         }
     }
 
