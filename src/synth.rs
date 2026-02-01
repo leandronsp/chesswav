@@ -1,52 +1,40 @@
 //! Audio synthesis module - generates waveforms from frequencies.
-//!
-//! # Sine Wave Formula
-//!
-//! ```text
-//! sample[idx] = AMPLITUDE × sin(2π × frequency × idx / SAMPLE_RATE)
-//!
-//!   Amplitude
-//!      32767 │      ╭─╮      ╭─╮
-//!            │    ╭╯   ╰╮  ╭╯   ╰╮
-//!          0 │───╯       ╰╯       ╰───
-//!            │
-//!     -32767 │
-//!            └────────────────────────→ time
-//!                 │← 1 cycle →│
-//! ```
 
 use std::f64::consts::PI;
 
 use crate::audio::{MS_PER_SECOND, SAMPLE_RATE};
+use crate::blend::Blend;
+use crate::waveform::{Waveform, Sine, Square, Triangle};
 
 const AMPLITUDE: f64 = i16::MAX as f64;
 
-/// Generates a sine wave at the given frequency.
-///
-/// Returns a vector of 16-bit samples.
-pub fn sine(freq: u32, duration_ms: u32) -> Vec<i16> {
+/// Generate samples from a waveform with blending options.
+pub fn generate<W: Waveform>(wave: &W, freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
     let num_samples = (SAMPLE_RATE * duration_ms / MS_PER_SECOND) as usize;
     let angular_freq = 2.0 * PI * freq as f64 / SAMPLE_RATE as f64;
 
     (0..num_samples)
-        .map(|idx| (AMPLITUDE * (angular_freq * idx as f64).sin()) as i16)
-        .collect()
-}
-
-/// Generates a triangle wave at the given frequency.
-///
-/// Returns a vector of 16-bit samples.
-pub fn triangle(freq: u32, duration_ms: u32) -> Vec<i16> {
-    let num_samples = (SAMPLE_RATE * duration_ms / MS_PER_SECOND) as usize;
-
-    (0..num_samples)
         .map(|idx| {
-            let t = idx as f64 / SAMPLE_RATE as f64;
-            let phase = (t * freq as f64).fract();
-            let value = 4.0 * (phase - 0.5).abs() - 1.0;
+            let phase = angular_freq * idx as f64;
+            let value = blend.apply(wave, phase);
             (value * AMPLITUDE) as i16
         })
         .collect()
+}
+
+/// Generates a sine wave at the given frequency.
+pub fn sine(freq: u32, duration_ms: u32) -> Vec<i16> {
+    generate(&Sine, freq, duration_ms, Blend::none())
+}
+
+/// Generates a square wave with optional blending.
+pub fn square(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
+    generate(&Square, freq, duration_ms, blend)
+}
+
+/// Generates a triangle wave with optional blending.
+pub fn triangle(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
+    generate(&Triangle, freq, duration_ms, blend)
 }
 
 #[cfg(test)]
@@ -82,18 +70,35 @@ mod tests {
 
     #[test]
     fn triangle_sample_count() {
-        assert_eq!(triangle(440, 100).len(), 4410);
+        assert_eq!(triangle(440, 100, Blend::none()).len(), 4410);
     }
 
     #[test]
     fn triangle_within_amplitude_range() {
-        for &s in &triangle(440, 100) {
+        for &s in &triangle(440, 100, Blend::none()) {
             assert!(s >= i16::MIN && s <= i16::MAX);
         }
     }
 
     #[test]
     fn triangle_differs_from_sine() {
-        assert_ne!(sine(440, 100), triangle(440, 100));
+        assert_ne!(sine(440, 100), triangle(440, 100, Blend::none()));
+    }
+
+    #[test]
+    fn square_sample_count() {
+        assert_eq!(square(440, 100, Blend::none()).len(), 4410);
+    }
+
+    #[test]
+    fn square_within_amplitude_range() {
+        for &s in &square(440, 100, Blend::none()) {
+            assert!(s >= i16::MIN && s <= i16::MAX);
+        }
+    }
+
+    #[test]
+    fn square_differs_from_sine() {
+        assert_ne!(sine(440, 100), square(440, 100, Blend::none()));
     }
 }

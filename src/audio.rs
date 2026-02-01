@@ -18,6 +18,7 @@
 //! [WAV file bytes]
 //! ```
 
+use crate::blend::Blend;
 use crate::chess::{Move, Piece};
 use crate::{freq, synth, wav};
 
@@ -50,7 +51,8 @@ fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
     let freq: u32 = freq::from_square(&m.dest);
     let note: Vec<i16> = match m.piece {
         Piece::Pawn => synth::sine(freq, NOTE_MS),
-        Piece::Knight => synth::triangle(freq, NOTE_MS),
+        Piece::Knight => synth::triangle(freq, NOTE_MS, Blend::none()),
+        Piece::Rook => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 7)),
     };
 
     note.into_iter().chain(silence.iter().copied()).collect()

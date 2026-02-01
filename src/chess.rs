@@ -12,6 +12,7 @@
 pub enum Piece {
     Pawn,
     Knight,
+    Rook,
 }
 
 /// A board square with file (column a-h) and rank (row 1-8).
@@ -66,6 +67,8 @@ impl Move {
         let clean = Self::strip_annotations(input);
         let piece = if clean.starts_with('N') {
             Piece::Knight
+        } else if clean.starts_with('R') {
+            Piece::Rook
         } else {
             Piece::Pawn
         };
@@ -123,6 +126,13 @@ mod tests {
         let m = Move::parse("Qh5+").unwrap();
         assert_eq!(m.piece, Piece::Pawn);
         assert_eq!(m.dest, Square { file: 7, rank: 4 });
+    }
+
+    #[test]
+    fn move_rook() {
+        let m = Move::parse("Rad1").unwrap();
+        assert_eq!(m.piece, Piece::Rook);
+        assert_eq!(m.dest, Square { file: 3, rank: 0 });
     }
 
     #[test]
