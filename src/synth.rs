@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 
 use crate::audio::{MS_PER_SECOND, SAMPLE_RATE};
 use crate::blend::Blend;
-use crate::waveform::{Waveform, Sine, Square, Triangle, Sawtooth};
+use crate::waveform::{Composite, Harmonics, Sawtooth, Sine, Square, Triangle, Waveform};
 
 const AMPLITUDE: f64 = i16::MAX as f64;
 
@@ -40,6 +40,16 @@ pub fn triangle(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
 /// Generates a sawtooth wave with optional blending.
 pub fn sawtooth(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
     generate(&Sawtooth, freq, duration_ms, blend)
+}
+
+/// Generates a composite wave with optional blending.
+pub fn composite(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
+    generate(&Composite, freq, duration_ms, blend)
+}
+
+/// Generates a harmonics wave with optional blending.
+pub fn harmonics(freq: u32, duration_ms: u32, blend: Blend) -> Vec<i16> {
+    generate(&Harmonics, freq, duration_ms, blend)
 }
 
 #[cfg(test)]
@@ -122,5 +132,29 @@ mod tests {
     #[test]
     fn sawtooth_differs_from_sine() {
         assert_ne!(sine(440, 100), sawtooth(440, 100, Blend::none()));
+    }
+
+    #[test]
+    fn composite_sample_count() {
+        assert_eq!(composite(440, 100, Blend::none()).len(), 4410);
+    }
+
+    #[test]
+    fn composite_within_amplitude_range() {
+        for &s in &composite(440, 100, Blend::none()) {
+            assert!(s >= i16::MIN && s <= i16::MAX);
+        }
+    }
+
+    #[test]
+    fn harmonics_sample_count() {
+        assert_eq!(harmonics(440, 100, Blend::none()).len(), 4410);
+    }
+
+    #[test]
+    fn harmonics_within_amplitude_range() {
+        for &s in &harmonics(440, 100, Blend::none()) {
+            assert!(s >= i16::MIN && s <= i16::MAX);
+        }
     }
 }

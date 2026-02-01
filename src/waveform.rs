@@ -95,6 +95,18 @@ pub struct Triangle;
 #[derive(Clone, Copy)]
 pub struct Sawtooth;
 
+/// Composite wave - fundamental + many overtones, rich/full timbre.
+///
+/// Formula: `sin(f) + sin(2f)/2 + sin(3f)/3 + sin(4f)/4 + sin(5f)/5`
+#[derive(Clone, Copy)]
+pub struct Composite;
+
+/// Harmonics wave - sine with added overtones, warm/noble timbre.
+///
+/// Formula: `sin(f) + 0.5*sin(2f) + 0.25*sin(3f)`
+#[derive(Clone, Copy)]
+pub struct Harmonics;
+
 impl Waveform for Sine {
     fn sample(&self, phase: f64) -> f64 {
         phase.sin()
@@ -172,5 +184,40 @@ impl Waveform for Sawtooth {
             val += (phase * n as f64).sin() / n as f64;
         }
         val * -2.0 / PI
+    }
+}
+
+impl Waveform for Composite {
+    fn sample(&self, phase: f64) -> f64 {
+        let h1 = phase.sin();
+        let h2 = (phase * 2.0).sin() / 2.0;
+        let h3 = (phase * 3.0).sin() / 3.0;
+        let h4 = (phase * 4.0).sin() / 4.0;
+        let h5 = (phase * 5.0).sin() / 5.0;
+        (h1 + h2 + h3 + h4 + h5) / 2.283
+    }
+
+    fn sample_band_limited(&self, phase: f64, harmonics: u32) -> f64 {
+        let mut val = 0.0;
+        let mut total_amp = 0.0;
+        for n in 1..=harmonics.min(5) {
+            let amp = 1.0 / n as f64;
+            val += (phase * n as f64).sin() * amp;
+            total_amp += amp;
+        }
+        val / total_amp
+    }
+}
+
+impl Waveform for Harmonics {
+    fn sample(&self, phase: f64) -> f64 {
+        let h1 = phase.sin();
+        let h2 = (phase * 2.0).sin() * 0.5;
+        let h3 = (phase * 3.0).sin() * 0.25;
+        (h1 + h2 + h3) / 1.75
+    }
+
+    fn sample_band_limited(&self, phase: f64, _harmonics: u32) -> f64 {
+        self.sample(phase)
     }
 }
