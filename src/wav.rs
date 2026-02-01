@@ -25,13 +25,15 @@
 
 use crate::audio::{BITS_PER_SAMPLE, NUM_CHANNELS, SAMPLE_RATE};
 
+pub const HEADER_SIZE: usize = 44;
+
 /// Generates a 44-byte WAV header for the given number of samples.
-pub fn header(num_samples: u32) -> [u8; 44] {
+pub fn header(num_samples: u32) -> [u8; HEADER_SIZE] {
     let block_align = NUM_CHANNELS * (BITS_PER_SAMPLE / 8);
     let byte_rate = SAMPLE_RATE * block_align as u32;
     let data_size = num_samples * block_align as u32;
 
-    let mut h = [0u8; 44];
+    let mut h = [0u8; HEADER_SIZE];
 
     // RIFF chunk
     h[0..4].copy_from_slice(b"RIFF");
