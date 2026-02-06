@@ -19,7 +19,7 @@
 //! ```
 
 use crate::blend::Blend;
-use crate::chess::{Move, Piece};
+use crate::chess::{Move, Piece, Threat};
 use crate::{freq, synth, wav};
 
 // Audio format constants
@@ -50,13 +50,18 @@ pub fn generate(input: &str) -> Vec<i16> {
 
 fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
     let freq: u32 = freq::from_square(&m.dest);
-    let note: Vec<i16> = match m.piece {
-        Piece::Pawn => synth::sine(freq, NOTE_MS),
-        Piece::Knight => synth::triangle(freq, NOTE_MS, Blend::none()),
-        Piece::Rook => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 7)),
-        Piece::Bishop => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.3, 8)),
-        Piece::Queen => synth::composite(freq, NOTE_MS, Blend::none()),
-        Piece::King => synth::harmonics(freq, NOTE_MS, Blend::none()),
+    let note: Vec<i16> = match (m.piece, m.threat) {
+        (Piece::Pawn, Threat::None) => synth::sine(freq, NOTE_MS),
+        (Piece::Pawn, Threat::Check) => synth::triangle(freq, NOTE_MS, Blend::with_sine(0.7)),
+        (Piece::Knight, Threat::None) => synth::triangle(freq, NOTE_MS, Blend::none()),
+        (Piece::Knight, Threat::Check) => synth::triangle(freq, NOTE_MS, Blend::with_sine(0.4)),
+        (Piece::Rook, Threat::None) => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 7)),
+        (Piece::Rook, Threat::Check) => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.6, 3)),
+        (Piece::Bishop, Threat::None) => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.3, 8)),
+        (Piece::Bishop, Threat::Check) => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.5, 3)),
+        (Piece::Queen, Threat::None) => synth::composite(freq, NOTE_MS, Blend::none()),
+        (Piece::Queen, Threat::Check) => synth::composite(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 3)),
+        (Piece::King, _) => synth::harmonics(freq, NOTE_MS, Blend::none()),
     };
 
     note.into_iter().chain(silence.iter().copied()).collect()
@@ -111,5 +116,19 @@ mod tests {
             wav.len(),
             wav::HEADER_SIZE + samples.len() * BYTES_PER_SAMPLE
         );
+    }
+
+    #[test]
+    fn check_produces_different_samples() {
+        let normal = generate("Nf3");
+        let check = generate("Nf3+");
+        assert_ne!(normal, check);
+    }
+
+    #[test]
+    fn check_same_length_as_normal() {
+        let normal = generate("Nf3");
+        let check = generate("Nf3+");
+        assert_eq!(normal.len(), check.len());
     }
 }
