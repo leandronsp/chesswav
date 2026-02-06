@@ -48,6 +48,31 @@ pub fn generate(input: &str) -> Vec<i16> {
         .collect()
 }
 
+pub fn synthesize_move(m: &Move) -> Vec<i16> {
+    let silence: Vec<i16> = vec![0; (SAMPLE_RATE * SILENCE_MS / MS_PER_SECOND) as usize];
+    move_to_samples(m, &silence)
+}
+
+pub fn play(wav: &[u8]) {
+    let path = std::env::temp_dir().join("chesswav.wav");
+    std::fs::write(&path, wav).expect("Failed to write temp file");
+
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("afplay")
+        .arg(&path)
+        .status()
+        .expect("Failed to play audio");
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("aplay")
+        .args(["-f", "S16_LE", "-r", "44100", "-c", "1"])
+        .arg(&path)
+        .status()
+        .expect("Failed to play audio");
+
+    std::fs::remove_file(&path).ok();
+}
+
 fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
     let freq: u32 = freq::from_square(&m.dest);
     let piece = m.promotion.unwrap_or(m.piece);
