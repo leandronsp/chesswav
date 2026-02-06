@@ -332,3 +332,7 @@ Play a simple opening and hear it. That's it.
 ## Future Refinements
 
 PRDs will be created per feature as we progress through sprints.
+
+### Multiplayer via Sockets
+
+Real-time multiplayer mode using TCP sockets. Two players connect, play a game, and each move generates audio for both sides. Audio can be opted out by either player. Perfect for live stream X1 challenges.
