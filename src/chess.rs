@@ -12,6 +12,7 @@
 pub enum Threat {
     None,
     Check,
+    Checkmate,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -94,14 +95,20 @@ pub struct Move {
     pub dest: Square,
     pub threat: Threat,
     pub capture: Capture,
+    pub promotion: Option<Piece>,
 }
 
 impl Move {
     /// Parses algebraic notation into a Move.
     /// move_index determines turn: even = white (rank 0), odd = black (rank 7).
     pub fn parse(input: &str, move_index: usize) -> Option<Move> {
-        let threat = if input.contains('+') { Threat::Check } else { Threat::None };
+        let threat = match (input.contains('#'), input.contains('+')) {
+            (true, _) => Threat::Checkmate,
+            (_, true) => Threat::Check,
+            _ => Threat::None,
+        };
         let capture = if input.contains('x') { Capture::Taken } else { Capture::None };
+        let promotion = Self::parse_promotion(input);
         let clean = Self::strip_annotations(input);
         let rank = if move_index % 2 == 0 { 0 } else { 7 };
 
@@ -114,7 +121,7 @@ impl Move {
         let (file_char, rank_char) = Self::extract_destination(&clean)?;
         let dest = Square::parse(file_char, rank_char)?;
 
-        Some(Move { piece, dest, threat, capture })
+        Some(Move { piece, dest, threat, capture, promotion })
     }
 
     fn parse_castling(clean: &str, rank: u8, threat: Threat, capture: Capture) -> Option<Move> {
@@ -124,19 +131,29 @@ impl Move {
                 dest: Square { file: 6, rank },
                 threat,
                 capture,
+                promotion: None,
             }),
             "OOO" => Some(Move {
                 piece: Piece::King,
                 dest: Square { file: 2, rank },
                 threat,
                 capture,
+                promotion: None,
             }),
             _ => None,
         }
     }
 
+    fn parse_promotion(input: &str) -> Option<Piece> {
+        let after_eq = input.split('=').nth(1)?;
+        Piece::from_char(after_eq.chars().next()?)
+    }
+
     fn strip_annotations(input: &str) -> String {
         input
+            .split('=')
+            .next()
+            .unwrap_or(input)
             .chars()
             .filter(|c| !matches!(c, '+' | '#' | '!' | '?' | 'x' | '-'))
             .collect()
@@ -165,6 +182,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 4, rank: 3 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -174,6 +192,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 5, rank: 2 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -183,6 +202,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 2, rank: 5 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::Taken);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -192,6 +212,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 1, rank: 4 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -201,6 +222,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 7, rank: 4 });
         assert_eq!(m.threat, Threat::Check);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -210,6 +232,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 5, rank: 0 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -219,6 +242,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 6, rank: 0 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -228,6 +252,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 6, rank: 7 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -237,6 +262,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 2, rank: 0 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -246,6 +272,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 2, rank: 7 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -255,6 +282,7 @@ mod tests {
         assert_eq!(m.dest, Square { file: 3, rank: 0 });
         assert_eq!(m.threat, Threat::None);
         assert_eq!(m.capture, Capture::None);
+        assert_eq!(m.promotion, None);
     }
 
     #[test]
@@ -305,5 +333,48 @@ mod tests {
         assert_eq!(m.piece, Piece::Bishop);
         assert_eq!(m.threat, Threat::Check);
         assert_eq!(m.capture, Capture::Taken);
+    }
+
+    #[test]
+    fn checkmate_detected() {
+        let m = Move::parse("Qf7#", 0).unwrap();
+        assert_eq!(m.piece, Piece::Queen);
+        assert_eq!(m.dest, Square { file: 5, rank: 6 });
+        assert_eq!(m.threat, Threat::Checkmate);
+    }
+
+    #[test]
+    fn promotion_detected() {
+        let m = Move::parse("e8=Q", 0).unwrap();
+        assert_eq!(m.piece, Piece::Pawn);
+        assert_eq!(m.dest, Square { file: 4, rank: 7 });
+        assert_eq!(m.promotion, Some(Piece::Queen));
+    }
+
+    #[test]
+    fn promotion_with_capture() {
+        let m = Move::parse("exd8=Q", 0).unwrap();
+        assert_eq!(m.piece, Piece::Pawn);
+        assert_eq!(m.dest, Square { file: 3, rank: 7 });
+        assert_eq!(m.capture, Capture::Taken);
+        assert_eq!(m.promotion, Some(Piece::Queen));
+    }
+
+    #[test]
+    fn no_promotion_by_default() {
+        let m = Move::parse("e4", 0).unwrap();
+        assert_eq!(m.promotion, None);
+    }
+
+    #[test]
+    fn promotion_to_knight() {
+        let m = Move::parse("e8=N", 0).unwrap();
+        assert_eq!(m.promotion, Some(Piece::Knight));
+    }
+
+    #[test]
+    fn promotion_to_rook() {
+        let m = Move::parse("a1=R", 1).unwrap();
+        assert_eq!(m.promotion, Some(Piece::Rook));
     }
 }

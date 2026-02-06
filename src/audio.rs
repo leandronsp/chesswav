@@ -50,18 +50,26 @@ pub fn generate(input: &str) -> Vec<i16> {
 
 fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
     let freq: u32 = freq::from_square(&m.dest);
-    let note: Vec<i16> = match (m.piece, m.threat) {
+    let piece = m.promotion.unwrap_or(m.piece);
+    let note: Vec<i16> = match (piece, m.threat) {
         (Piece::Pawn, Threat::None) => synth::sine(freq, NOTE_MS),
         (Piece::Pawn, Threat::Check) => synth::triangle(freq, NOTE_MS, Blend::with_sine(0.7)),
+        (Piece::Pawn, Threat::Checkmate) => synth::triangle(freq, NOTE_MS, Blend::with_sine(0.9)),
         (Piece::Knight, Threat::None) => synth::triangle(freq, NOTE_MS, Blend::none()),
         (Piece::Knight, Threat::Check) => synth::triangle(freq, NOTE_MS, Blend::with_sine(0.4)),
+        (Piece::Knight, Threat::Checkmate) => synth::triangle(freq, NOTE_MS, Blend::with_sine(0.7)),
         (Piece::Rook, Threat::None) => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 7)),
         (Piece::Rook, Threat::Check) => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.6, 3)),
+        (Piece::Rook, Threat::Checkmate) => synth::square(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.8, 2)),
         (Piece::Bishop, Threat::None) => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.3, 8)),
         (Piece::Bishop, Threat::Check) => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.5, 3)),
+        (Piece::Bishop, Threat::Checkmate) => synth::sawtooth(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.7, 2)),
         (Piece::Queen, Threat::None) => synth::composite(freq, NOTE_MS, Blend::none()),
         (Piece::Queen, Threat::Check) => synth::composite(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.4, 3)),
-        (Piece::King, _) => synth::harmonics(freq, NOTE_MS, Blend::none()),
+        (Piece::Queen, Threat::Checkmate) => synth::composite(freq, NOTE_MS, Blend::with_sine_and_band_limit(0.6, 2)),
+        (Piece::King, Threat::None) => synth::harmonics(freq, NOTE_MS, Blend::none()),
+        (Piece::King, Threat::Check) => synth::harmonics(freq, NOTE_MS, Blend::none()),
+        (Piece::King, Threat::Checkmate) => synth::harmonics(freq, NOTE_MS, Blend::with_sine(0.5)),
     };
 
     note.into_iter().chain(silence.iter().copied()).collect()
@@ -130,5 +138,19 @@ mod tests {
         let normal = generate("Nf3");
         let check = generate("Nf3+");
         assert_eq!(normal.len(), check.len());
+    }
+
+    #[test]
+    fn checkmate_produces_different_samples() {
+        let check = generate("Qf7+");
+        let checkmate = generate("Qf7#");
+        assert_ne!(check, checkmate);
+    }
+
+    #[test]
+    fn promotion_uses_promoted_piece_timbre() {
+        let pawn = generate("e8");
+        let promoted = generate("e8=Q");
+        assert_ne!(pawn, promoted);
     }
 }
