@@ -17,7 +17,11 @@ pub fn run() {
     let mut stdout = io::stdout();
 
     loop {
-        let side = if move_index % 2 == 0 { "White" } else { "Black" };
+        let side = if move_index % 2 == 0 {
+            "White"
+        } else {
+            "Black"
+        };
         let move_num = move_index / 2 + 1;
         print!("  [Move {move_num} - {side}] > ");
         stdout.flush().ok();
@@ -53,7 +57,11 @@ pub fn run() {
             }
         };
 
-        let color = if move_index % 2 == 0 { Color::White } else { Color::Black };
+        let color = if move_index % 2 == 0 {
+            Color::White
+        } else {
+            Color::Black
+        };
 
         let parsed = match resolve_move(&board, &chess_move, input, color) {
             Some(p) => p,
@@ -74,7 +82,12 @@ pub fn run() {
     }
 }
 
-fn resolve_move(board: &Board, chess_move: &Move, notation: &str, color: Color) -> Option<ParsedMove> {
+fn resolve_move(
+    board: &Board,
+    chess_move: &Move,
+    notation: &str,
+    color: Color,
+) -> Option<ParsedMove> {
     let clean = strip_for_hints(notation);
 
     if is_castling(notation) {
@@ -83,7 +96,13 @@ fn resolve_move(board: &Board, chess_move: &Move, notation: &str, color: Color) 
 
     let (file_hint, rank_hint) = extract_hints(&clean, chess_move.piece);
 
-    let origin = board.find_origin(chess_move.piece, &chess_move.dest, color, file_hint, rank_hint)?;
+    let origin = board.find_origin(
+        chess_move.piece,
+        &chess_move.dest,
+        color,
+        file_hint,
+        rank_hint,
+    )?;
 
     Some(ParsedMove {
         origin,
@@ -94,7 +113,10 @@ fn resolve_move(board: &Board, chess_move: &Move, notation: &str, color: Color) 
 }
 
 fn is_castling(notation: &str) -> bool {
-    let clean: String = notation.chars().filter(|c| !matches!(c, '+' | '#')).collect();
+    let clean: String = notation
+        .chars()
+        .filter(|c| !matches!(c, '+' | '#'))
+        .collect();
     clean == "O-O" || clean == "O-O-O"
 }
 

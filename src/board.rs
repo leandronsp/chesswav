@@ -109,7 +109,9 @@ impl Board {
             Piece::Knight => Self::knight_can_reach(file, rank, dest),
             Piece::Bishop => self.bishop_can_reach(file, rank, dest),
             Piece::Rook => self.rook_can_reach(file, rank, dest),
-            Piece::Queen => self.bishop_can_reach(file, rank, dest) || self.rook_can_reach(file, rank, dest),
+            Piece::Queen => {
+                self.bishop_can_reach(file, rank, dest) || self.rook_can_reach(file, rank, dest)
+            }
             Piece::King => Self::king_can_reach(file, rank, dest),
         }
     }
@@ -285,10 +287,7 @@ mod tests {
             origin: Square { file: 4, rank: 0 },
             dest: Square { file: 6, rank: 0 },
             promotion: None,
-            castling_rook: Some((
-                Square { file: 7, rank: 0 },
-                Square { file: 5, rank: 0 },
-            )),
+            castling_rook: Some((Square { file: 7, rank: 0 }, Square { file: 5, rank: 0 })),
         };
         board.apply_move(&m);
         assert_eq!(board.get(6, 0), Some((Piece::King, Color::White)));
