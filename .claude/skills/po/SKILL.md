@@ -10,8 +10,11 @@ description: Product Owner - scans codebase and creates or amends GitHub issues 
 ## Usage
 
 - `/po <prompt>` - Create a GitHub issue from the given feature description
+- `/po <prompt> --priority <P0|P1|P2|P3>` - Create issue with explicit priority
 - `/po` - Ask user what to build, then create the issue
 - `/po amend <issue_number> <summary>` - Append a revision to an existing issue (called by `/tdd` when the implementer's research refines the PRD)
+
+If no `--priority` is given, ask the user which priority to assign.
 
 ## Workflow
 
@@ -87,8 +90,11 @@ gh issue create \
 <PRD content>
 EOF
 )" \
-  --label "prd"
+  --label "prd" \
+  --label "P2: medium"
 ```
+
+Replace `"P2: medium"` with the chosen priority label (`P0: critical`, `P1: high`, `P2: medium`, `P3: low`).
 
 If the `prd` label doesn't exist, create it first:
 
