@@ -1,80 +1,30 @@
 ---
 name: po
-description: Product Owner & Technical Architect - creates PRDs, requirements, user stories, and GitHub issues. Use when: PRD, product requirements, requirements document, user story, feature spec, roadmap planning, what should we build, plan feature, design feature, scope, acceptance criteria, product vision, prioritize, MVP, epic, issue, create issue.
+description: Product Owner - scans codebase and creates GitHub issue with PRD. Use when: PRD, feature, issue, create issue, what should we build, plan feature, design feature, scope, requirements, user story.
 ---
 
 # Product Owner - ChessWAV Expert
 
-**Research the codebase, create PRDs, and open GitHub issues.**
+**Scan the codebase, write a PRD, and open a GitHub issue.**
+
+## Usage
+
+- `/po <prompt>` - Create a GitHub issue from the given feature description
+- `/po` - Ask user what to build, then create the issue
 
 ## Workflow
 
-1. **Read ROADMAP.md** to understand epics, features, and priorities
-2. **Ask user** which feature/epic to create a PRD for (if not specified)
-3. **Scan the codebase** to understand current state:
+1. **Scan the codebase** to understand current state:
    - Read `src/lib.rs` to see existing modules and exports
-   - Explore relevant source files to understand what's already implemented
-   - Check `docs/prd/` and `docs/spec/` for existing PRDs/SPECs
+   - Explore relevant source files for what's already implemented
    - Identify gaps, dependencies, and integration points
-4. **Enter plan mode** to design the PRD with codebase context
-5. **Write PRD** to `docs/prd/<epic>-<feature>.md`
-6. **Create GitHub issue** using `gh issue create`
+2. **Read ROADMAP.md** if the prompt maps to a roadmap item
+3. **Write the PRD** as the issue body (no local file)
+4. **Create GitHub issue** with conventional title and PRD body
 
-## PRD Structure
+## Issue Title
 
-```markdown
-# PRD: [Feature Name]
-
-> Source: ROADMAP.md -> Epic X -> Feature X.Y
-
-## Overview
-What we're building and why.
-
-## Problem Statement
-What user problem does this solve?
-
-## User Stories
-- As a [user], I want [goal] so that [benefit]
-
-## Requirements
-
-### Functional
-- [ ] FR-1: Description
-
-### Non-Functional
-- [ ] NFR-1: Performance/quality requirement
-
-## Current State
-What already exists in the codebase (modules, types, functions).
-
-## Technical Approach
-- Affected modules (board.rs, synth.rs, etc.)
-- New types/structs needed
-- Data flow
-
-## Chess Domain Considerations
-Notation, board state, move validation specifics.
-
-## Audio Domain Considerations
-Frequency mapping, waveform choices, WAV output.
-
-## Acceptance Criteria
-Given/When/Then scenarios.
-
-## Out of Scope
-What we're explicitly NOT doing.
-
-## Dependencies
-Modules that must exist first.
-```
-
-## GitHub Issue
-
-After writing the PRD file, create a GitHub issue.
-
-### Issue Title
-
-Use conventional format matching the feature scope:
+Conventional format:
 
 ```
 feat(<module>): <short description>
@@ -84,22 +34,58 @@ Examples:
 - `feat(board): add en passant support`
 - `feat(synth): implement ADSR envelope`
 - `feat(notation): parse promotion moves`
-- `feat(cli): add PGN file input`
+- `fix(repl): handle invalid move input gracefully`
 
 Rules:
 - Lowercase after prefix
-- Present tense imperative ("add", "implement", not "added", "adds")
+- Present tense imperative ("add", not "added")
 - Under 70 characters
-- Module name matches affected `src/*.rs` file or domain area
+- Module name matches `src/*.rs` or domain area
 
-### Issue Body
+## Issue Body (PRD)
 
-The PRD content is the issue body. Use this command:
+```markdown
+## Overview
+What we're building and why.
+
+## Problem Statement
+What user problem does this solve?
+
+## User Stories
+- As a [user], I want [goal] so that [benefit]
+
+## Current State
+What already exists in the codebase relevant to this feature.
+
+## Requirements
+
+### Functional
+- [ ] FR-1: Description
+
+### Non-Functional
+- [ ] NFR-1: Performance/quality requirement
+
+## Technical Approach
+- Affected modules
+- New types/structs needed
+- Data flow
+
+## Acceptance Criteria
+Given/When/Then scenarios.
+
+## Out of Scope
+What we're explicitly NOT doing.
+```
+
+## Creating the Issue
 
 ```bash
 gh issue create \
   --title "feat(<module>): <description>" \
-  --body-file "docs/prd/<epic>-<feature>.md" \
+  --body "$(cat <<'EOF'
+<PRD content>
+EOF
+)" \
   --label "prd"
 ```
 
@@ -109,7 +95,7 @@ If the `prd` label doesn't exist, create it first:
 gh label create prd --description "Product Requirements Document" --color "0075ca"
 ```
 
-After creating the issue, report the issue URL to the user.
+Report the issue URL to the user when done.
 
 ## Constraints
 
@@ -117,14 +103,8 @@ After creating the issue, report the issue URL to the user.
 - **Zero dependencies** - everything hand-rolled
 - **Idiomatic Rust** - ownership, borrowing, enums, pattern matching
 
-## User Personas
-
-- **Chess player** - wants to "hear" famous games, may be visually impaired
-- **Musician** - wants interesting soundscapes, cares about audio quality
-- **Developer** - wants clean Rust examples, learns from implementation
-
 ## Pipeline
 
 ```
-ROADMAP.md -> /po (PRD + GitHub issue) -> /analyst (SPEC) -> /tdd (implement) -> /review -> /commit
+/po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
 ```

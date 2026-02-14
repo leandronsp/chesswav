@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Prepare and open a draft PR for the current branch. Use when asked to create a PR, open a PR, or prepare changes for pull request.
+description: Open or update a draft PR for the current branch. Use when: create PR, open PR, draft PR, pull request, prepare for review.
 ---
 
 # Draft PR Creator
@@ -9,32 +9,14 @@ Creates or updates a draft pull request for the current branch.
 
 ## Usage
 
-- `/pr` - Create draft PR for current branch (or update if one already exists)
+- `/pr` - Create draft PR for current branch (or update if one exists)
 - `/pr <url>` - Update existing PR description
-
-## PR Title Format
-
-```
-<type>: <short description>
-```
-
-Types: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`
-
-Examples:
-- `feat: add ADSR envelope to synth module`
-- `fix: correct WAV header byte order`
-- `refactor: extract frequency mapping to module`
-
-Rules:
-- Lowercase after prefix
-- Present tense imperative ("add" not "added")
-- Under 70 characters
 
 ## Workflow
 
 ### 1. Run tech debt audit
 
-Before creating the PR, invoke `/techdebt` to scan for issues. If there are **Critical** items, fix them first before proceeding.
+Invoke `/techdebt` to scan for issues. If there are **Critical** items, fix them first.
 
 ### 2. Gather context
 
@@ -44,15 +26,15 @@ git log main..HEAD --oneline
 git diff main...HEAD --stat
 ```
 
-### 3. Write PR description
-
-Use the template below. Keep it concise.
-
-### 4. Check if PR already exists
+### 3. Check if PR already exists
 
 ```bash
 gh pr view --json number,title,body 2>/dev/null
 ```
+
+### 4. Write PR description
+
+Use the template below. Keep it concise and natural.
 
 ### 5a. If NO existing PR - Create draft PR
 
@@ -72,6 +54,21 @@ EOF
 )"
 ```
 
+Report the PR URL to the user when done.
+
+## PR Title Format
+
+```
+<type>: <short description>
+```
+
+Types: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`
+
+Rules:
+- Lowercase after prefix
+- Present tense imperative ("add" not "added")
+- Under 70 characters
+
 ## PR Body Template
 
 ```markdown
@@ -89,7 +86,6 @@ EOF
 
 - [ ] `cargo test` passes
 - [ ] `cargo clippy -- -D warnings` passes
-- [ ] Manual testing done (if applicable)
 
 ## Tech Debt
 
@@ -100,31 +96,10 @@ EOF
 
 - **Fluid prose** in Summary - natural writing, not robotic
 - **2-3 bullet points** in Changes - highlights only, not a file list
-- **No file lists** - GitHub handles that in "Files changed"
+- **No file lists** - GitHub shows that in "Files changed"
 
-## Examples
+## Pipeline
 
-### Small Fix
-```markdown
-## Summary
-
-Fix frequency calculation that was producing wrong notes for squares on the h-file. The octave offset was off by one.
-
-## Changes
-
-- Fix off-by-one in `freq::square_to_frequency` for h-file squares
-- Add regression test for boundary squares
 ```
-
-### Feature
-```markdown
-## Summary
-
-Add ADSR envelope to the synth module, giving notes natural attack and decay dynamics instead of abrupt on/off. Each phase (attack, decay, sustain, release) is configurable per piece timbre.
-
-## Changes
-
-- Add `Envelope` struct with ADSR parameters
-- Integrate envelope into `synth::generate_samples`
-- Wire piece timbres to envelope presets
+/tdd <issue_url> -> /review -> /pr -> merge
 ```

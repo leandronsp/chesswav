@@ -1,9 +1,22 @@
 ---
 name: review
-description: Deep code review - Rust idioms, audio correctness, chess logic, safety. Use when: review, review this, code review, check this code, review my changes, analyze this, critique this, is this good, what do you think, check my implementation.
+description: Deep code review - Rust idioms, audio correctness, chess logic, safety. Builds a plan to address findings. Use when: review, review this, code review, check this code, review my changes, is this good, what do you think.
 ---
 
 # Code Review - Rust, Audio & Chess Expert
+
+**Reviews current changes, runs tech debt audit, and builds a plan to address findings.**
+
+## Workflow
+
+1. **Diff the branch** against main to understand all changes
+2. **Review** using the priorities below
+3. **Run `/techdebt`** to audit for pattern deviations and code smells
+4. **Enter plan mode** with a fix plan if there are Critical or Important findings
+5. **Implement fixes** after user approves the plan
+6. **Re-run `cargo test` and `cargo clippy`** to confirm everything is clean
+
+If the review finds nothing actionable, skip the plan and report the verdict.
 
 ## Review Priorities
 
@@ -44,7 +57,7 @@ match piece {
 }
 ```
 
-### 3. Safety (replaces standalone /security)
+### 3. Safety
 - No `unwrap()` in production code
 - No `unsafe` without justification
 - Integer overflow handled (use `checked_*` or `saturating_*`)
@@ -75,6 +88,10 @@ A) **Issue**: description
 
 ### Minor
 * Nitpick or suggestion
+
+### Verdict
+[ ] Clean - ready for `/pr`
+[ ] Needs fixes - see plan below
 ```
 
 ## Checklists
@@ -100,19 +117,8 @@ A) **Issue**: description
 - [ ] Disambiguation handled (Rad1 vs Rfd1)
 - [ ] Special moves: castling, en passant, promotion
 
-## Tech Debt Gate
-
-Before concluding the review, run `/techdebt` to audit the diff for pattern deviations, code smells, and AI-generated anti-patterns. Any **Critical** items from the tech debt audit must be resolved before the code is ready for PR.
-
-## When to Review
-
-- After `/tdd` completes a task
-- Before opening a PR (`/pr`)
-- When refactoring existing code
-- After bug fixes
-
 ## Pipeline
 
 ```
-/tdd -> /review (+ /techdebt) -> /pr -> merge
+/tdd <issue_url> -> /review (+ /techdebt) -> /pr
 ```

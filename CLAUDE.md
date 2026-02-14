@@ -224,17 +224,16 @@ Run tests: `cargo test`
 Skills form a sequential pipeline from idea to shipped code:
 
 ```
-ROADMAP.md -> /po (PRD + issue) -> /analyst -> /tdd (-> /refactor) -> /review (+ /techdebt) -> /pr -> /commit
+/po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
 ```
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
-| `/po` | Create PRD + GitHub issue from ROADMAP | Starting a new feature, defining requirements |
-| `/analyst` | Create SPEC from PRD | Breaking a PRD into implementable tasks |
-| `/tdd` | Implement tasks from SPEC | Building features with red-green-refactor |
+| `/po` | Scan codebase, create GitHub issue with PRD | Starting a new feature, defining requirements |
+| `/tdd` | Fetch issue, plan, implement with red-green-refactor | Building features from GitHub issues |
 | `/refactor` | Baby-step cleanup after green | Called by `/tdd` after each GREEN phase |
-| `/review` | Code review (Rust, audio, chess, safety) | After implementation, before PR |
-| `/techdebt` | Audit diff for pattern deviations and code smells | Called by `/review` and `/pr` before opening PR |
+| `/review` | Code review + techdebt audit, plan fixes | After implementation, before PR |
+| `/techdebt` | Audit diff for pattern deviations and code smells | Called by `/review` and `/pr` |
 | `/pr` | Open/update draft PR on GitHub | After review passes, before merge |
 | `/commit` | Git commit following conventions | After tests pass |
 
@@ -242,6 +241,7 @@ ROADMAP.md -> /po (PRD + issue) -> /analyst -> /tdd (-> /refactor) -> /review (+
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
+| `/analyst` | Create SPEC from PRD (detailed task breakdown) | When you need a formal spec document |
 | `/bug-finder` | Edge case hunting, stress testing | Something feels fragile, need to break it |
 | `/synth` | Audio synthesis reference (WAV, waveforms, ADSR) | Working on audio modules |
 | `/address-pr-comments` | Fetch and address PR review comments | After receiving PR feedback |
