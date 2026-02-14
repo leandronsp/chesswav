@@ -1,5 +1,23 @@
+//! Move disambiguation and hint extraction.
+//!
+//! Algebraic notation can be ambiguous when multiple pieces of the same type
+//! can reach the same square (e.g., `Rad1` vs `Rfd1`). This module extracts
+//! file/rank hints from notation and resolves castling moves into fully
+//! specified origin-destination pairs.
+//!
+//! Since we don't yet track full game state (move history, en passant rights,
+//! castling availability), disambiguation relies solely on notation hints and
+//! the current board position.
+//!
+//! ## Exported functions
+//!
+//! - `is_castling` — detects castling notation (`O-O`, `O-O-O`)
+//! - `resolve_castling` — converts castling into a `ResolvedMove` with rook movement
+//! - `strip_annotations` — removes check/capture/annotation symbols from notation
+//! - `extract_hints` — extracts file/rank disambiguation hints from cleaned notation
+
 use crate::board::Color;
-use crate::chess::{Move, ParsedMove, Piece, Square};
+use crate::chess::{NotationMove, Piece, ResolvedMove, Square};
 
 pub fn is_castling(notation: &str) -> bool {
     let clean: String = notation
@@ -9,7 +27,7 @@ pub fn is_castling(notation: &str) -> bool {
     clean == "O-O" || clean == "O-O-O"
 }
 
-pub fn resolve_castling(chess_move: &Move, color: Color) -> Option<ParsedMove> {
+pub fn resolve_castling(chess_move: &NotationMove, color: Color) -> Option<ResolvedMove> {
     let rank = match color {
         Color::White => 0,
         Color::Black => 7,
@@ -22,7 +40,7 @@ pub fn resolve_castling(chess_move: &Move, color: Color) -> Option<ParsedMove> {
         (Square { file: 0, rank }, Square { file: 3, rank })
     };
 
-    Some(ParsedMove {
+    Some(ResolvedMove {
         origin: Square { file: 4, rank },
         dest: chess_move.dest,
         promotion: None,
@@ -101,7 +119,7 @@ mod tests {
 
     #[test]
     fn resolve_kingside_castling_white() {
-        let chess_move = Move {
+        let chess_move = NotationMove {
             piece: Piece::King,
             dest: Square { file: 6, rank: 0 },
             threat: Threat::None,
@@ -119,7 +137,7 @@ mod tests {
 
     #[test]
     fn resolve_queenside_castling_black() {
-        let chess_move = Move {
+        let chess_move = NotationMove {
             piece: Piece::King,
             dest: Square { file: 2, rank: 7 },
             threat: Threat::None,

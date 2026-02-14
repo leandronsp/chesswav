@@ -1,3 +1,12 @@
+//! Board display formatting.
+//!
+//! Provides text rendering of the board state for the REPL and debug output.
+//!
+//! ## Exported functions
+//!
+//! - `piece_symbol` — maps a piece and color to its display character (uppercase = white, lowercase = black)
+//! - `Board::fmt` — renders the board as an 8x8 grid with rank/file labels
+
 use std::fmt;
 
 use crate::board::{Board, Color};

@@ -1,4 +1,4 @@
-use crate::chess::{Move, ParsedMove, Piece, Square};
+use crate::chess::{NotationMove, Piece, ResolvedMove, Square};
 use crate::hint::{extract_hints, is_castling, resolve_castling, strip_annotations};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -59,10 +59,10 @@ impl Board {
     /// and any special move data (castling rook, promotion).
     pub fn resolve_move(
         &self,
-        chess_move: &Move,
+        chess_move: &NotationMove,
         notation: &str,
         color: Color,
-    ) -> Option<ParsedMove> {
+    ) -> Option<ResolvedMove> {
         if is_castling(notation) {
             return resolve_castling(chess_move, color);
         }
@@ -78,7 +78,7 @@ impl Board {
             rank_hint,
         )?;
 
-        Some(ParsedMove {
+        Some(ResolvedMove {
             origin,
             dest: chess_move.dest,
             promotion: chess_move.promotion,
@@ -86,7 +86,7 @@ impl Board {
         })
     }
 
-    pub fn apply_move(&mut self, parsed: &ParsedMove) {
+    pub fn apply_move(&mut self, parsed: &ResolvedMove) {
         // Move the piece from origin to destination (handles king in castling too)
         let piece_on_origin = self.get(parsed.origin.file, parsed.origin.rank);
         self.clear_square(parsed.origin.file, parsed.origin.rank);
@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn apply_simple_move() {
         let mut board = Board::new();
-        let parsed = ParsedMove {
+        let parsed = ResolvedMove {
             origin: Square { file: 4, rank: 1 },
             dest: Square { file: 4, rank: 3 },
             promotion: None,
@@ -298,7 +298,7 @@ mod tests {
         let mut board = Board::new();
         board.clear_square(5, 0);
         board.clear_square(6, 0);
-        let parsed = ParsedMove {
+        let parsed = ResolvedMove {
             origin: Square { file: 4, rank: 0 },
             dest: Square { file: 6, rank: 0 },
             promotion: None,
@@ -316,7 +316,7 @@ mod tests {
         let mut board = Board::new();
         board.set(4, 6, (Piece::Pawn, Color::White));
         board.clear_square(4, 7);
-        let parsed = ParsedMove {
+        let parsed = ResolvedMove {
             origin: Square { file: 4, rank: 6 },
             dest: Square { file: 4, rank: 7 },
             promotion: Some(Piece::Queen),

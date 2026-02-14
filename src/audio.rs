@@ -5,8 +5,8 @@
 //! ```text
 //! "e4 Nf3"
 //!     │
-//!     ▼ Move::parse()
-//! [Move, Move]
+//!     ▼ NotationMove::parse()
+//! [NotationMove, NotationMove]
 //!     │
 //!     ▼ freq::from_square()
 //! [392 Hz, 349 Hz]
@@ -19,7 +19,7 @@
 //! ```
 
 use crate::blend::Blend;
-use crate::chess::{Move, Piece, Threat};
+use crate::chess::{NotationMove, Piece, Threat};
 use crate::{freq, synth, wav};
 
 // Audio format constants
@@ -43,12 +43,12 @@ pub fn generate(input: &str) -> Vec<i16> {
     input
         .split_whitespace()
         .enumerate()
-        .filter_map(|(idx, notation)| Move::parse(notation, idx))
+        .filter_map(|(idx, notation)| NotationMove::parse(notation, idx))
         .flat_map(|m| move_to_samples(&m, &silence))
         .collect()
 }
 
-pub fn synthesize_move(m: &Move) -> Vec<i16> {
+pub fn synthesize_move(m: &NotationMove) -> Vec<i16> {
     let silence: Vec<i16> = vec![0; (SAMPLE_RATE * SILENCE_MS / MS_PER_SECOND) as usize];
     move_to_samples(m, &silence)
 }
@@ -73,7 +73,7 @@ pub fn play(wav: &[u8]) {
     std::fs::remove_file(&path).ok();
 }
 
-fn move_to_samples(m: &Move, silence: &[i16]) -> Vec<i16> {
+fn move_to_samples(m: &NotationMove, silence: &[i16]) -> Vec<i16> {
     let freq: u32 = freq::from_square(&m.dest);
     let piece = m.promotion.unwrap_or(m.piece);
     let note: Vec<i16> = match (piece, m.threat) {

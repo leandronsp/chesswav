@@ -18,10 +18,43 @@ Creates or updates a draft pull request for the current branch.
 
 Invoke `/techdebt` to scan for issues. If there are **Critical** items, fix them first.
 
-### 2. Gather context
+### 2. Ensure feature branch and commit
+
+**NEVER commit to `main` unless the user explicitly requests it.**
 
 ```bash
 git branch --show-current
+git status
+```
+
+If on `main`, create and switch to a feature branch before doing anything else:
+
+```bash
+git checkout -b <type>/<short-name>
+```
+
+Branch naming follows the PR type prefix:
+- `feat/` — new features
+- `fix/` — bug fixes
+- `refactor/` — refactoring
+- `test/` — test additions
+- `chore/` — maintenance
+- `docs/` — documentation
+
+Derive the branch name from the commit history or changes (e.g., `refactor/extract-hint-display-modules`).
+
+After ensuring you're on a feature branch, check for uncommitted changes. If there are staged or unstaged changes, commit them using conventional commit format:
+
+```bash
+git add <relevant files>
+git commit -m "<type>: <description>"
+```
+
+Only proceed to the next step once all changes are committed on a feature branch.
+
+### 3. Gather context
+
+```bash
 git log main..HEAD --oneline
 git diff main...HEAD --stat
 ```
