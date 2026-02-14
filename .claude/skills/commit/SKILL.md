@@ -1,63 +1,38 @@
 ---
 name: commit
-description: Create a git commit. Vibe coded with Claude. Use when: commit, commit this, make a commit, commit changes, git commit, save changes, commit my work, stage and commit, commit it.
+description: Create a git commit following project conventions. Use when: commit, commit this, make a commit, commit changes, git commit, save changes, commit my work, stage and commit.
 ---
 
-# Git Commit - Vibe Coding Edition
-
-**This project is vibe coded with Claude.** AI mentions are totally fine.
+# Git Commit
 
 ## Format
 
 ```
 <type>: <short description>
-
-🤖 Vibe coded with Claude
 ```
 
 Types: `feat:`, `fix:`, `refactor:`, `test:`, `chore:`, `docs:`
 
-## Good Examples
+## Rules
 
-```bash
-git commit -m "feat: add sine wave generator
-
-🤖 Vibe coded with Claude"
-
-git commit -m "fix: correct WAV header byte order
-
-🤖 Vibe coded with Claude"
-
-git commit -m "refactor: extract frequency mapping to module
-
-🤖 Vibe coded with Claude"
-```
+1. **Concise** - short message, present tense ("add" not "added")
+2. **Lowercase** after prefix
+3. **No AI mentions** - never reference Claude, AI, or assistants
+4. **No emojis** in commit messages
+5. **Specific files** - `git add <files>`, never `git add .`
 
 ## Pre-commit Checklist
 
 ```bash
-# Run tests
-./tests/run_all.sh
-
-# Check bash syntax
-bash -n lib/*.sh
-
-# Review changes
+cargo clippy -- -D warnings
+cargo test
 git diff --staged
 ```
 
-## Commit Command
+## Examples
 
 ```bash
-git add <specific-files>
-git commit -m "<type>: <description>
-
-🤖 Vibe coded with Claude"
+git commit -m "feat: add sine wave generator"
+git commit -m "fix: correct WAV header byte order"
+git commit -m "refactor: extract frequency mapping to module"
 ```
-
-## Rules
-
-1. **Be specific** - What changed and why
-2. **Lowercase** after prefix
-3. **Present tense** - "add" not "added"
-4. **Test first** - All tests must pass before commit

@@ -1,124 +1,104 @@
 ---
 name: review
-description: Deep code review with bash best practices, security, audio correctness. Use when: review, review this, code review, check this code, review my changes, look at this code, analyze this, critique this, is this good, what do you think, review the code, check my implementation.
+description: Deep code review - Rust idioms, audio correctness, chess logic, safety. Use when: review, review this, code review, check this code, review my changes, analyze this, critique this, is this good, what do you think, check my implementation.
 ---
 
-# Code Review - Bash & Audio Expert
-
-## Expertise Applied
-
-- **Bash mastery**: Modern expansions, POSIX compliance, shellcheck rules
-- **Audio synthesis**: Correct waveform math, frequency calculations, WAV format
-- **Chess logic**: Notation parsing, board state, move validation
-- **Security**: Input validation, injection prevention, safe arithmetic
+# Code Review - Rust, Audio & Chess Expert
 
 ## Review Priorities
 
 ### 1. Correctness
 - Does the math work? (frequencies, waveforms, byte calculations)
-- Is the chess logic right? (legal moves, board state)
+- Is the chess logic right? (legal moves, board state, disambiguation)
 - Are edge cases handled?
 
-### 2. Bash Best Practices
-```bash
-# BAD: word splitting, glob expansion
-for file in $files; do
+### 2. Rust Idioms
 
-# GOOD: proper quoting
-for file in "${files[@]}"; do
+```rust
+// BAD: clone to silence borrow checker
+let piece = board.piece_at(square).clone();
 
-# BAD: external command
-length=$(echo "$str" | wc -c)
+// GOOD: borrow or restructure
+let piece = board.piece_at(square);
 
-# GOOD: parameter expansion
-length=${#str}
+// BAD: unwrap in production
+let value = result.unwrap();
 
-# BAD: command substitution in arithmetic
-result=$(($(cat file)))
+// GOOD: propagate or handle
+let value = result?;
 
-# GOOD: read into variable first
-value=$(<file)
-result=$((value))
+// BAD: wildcard on own enums
+match piece {
+    King => ...,
+    _ => ...,
+}
+
+// GOOD: exhaustive match
+match piece {
+    King => ...,
+    Queen => ...,
+    Rook => ...,
+    Bishop => ...,
+    Knight => ...,
+    Pawn => ...,
+}
 ```
 
-### 3. Security
-- Input sanitization (PGN/move input)
-- No eval with user input
-- Safe arithmetic (avoid overflow)
-- No command injection vectors
+### 3. Safety (replaces standalone /security)
+- No `unwrap()` in production code
+- No `unsafe` without justification
+- Integer overflow handled (use `checked_*` or `saturating_*`)
+- No panics on invalid input (return `Result`)
+- Input validated at system boundaries (CLI args, PGN parsing)
 
-### 4. Performance
-- Avoid subshells in loops
-- Use bash builtins over external commands
-- Efficient array operations
+### 4. Architecture
+- Separation of concerns (REPL/CLI thin, engine in domain modules)
+- `main.rs` stays thin
+- Naming favors meaning over brevity
+- Functions decomposed if not understandable at a glance
 
-### 5. Modularity
-- Single responsibility per function
-- Clear interfaces between modules
-- No global state pollution
+### 5. Performance
+- Prefer borrowing over cloning
+- Avoid unnecessary allocations in hot paths
+- Pre-calculate constants
 
-## Review Structure
+## Review Output Format
 
 ```markdown
-### Critical 🔴
+### Critical
 1) **Issue**: description
    **Fix**: solution
 
-### Important 🟡
+### Important
 A) **Issue**: description
    **Suggestion**: approach
 
-### Minor 🟢
+### Minor
 * Nitpick or suggestion
 ```
 
-## Bash-Specific Checks
+## Checklists
 
-- [ ] All variables quoted: `"${var}"`
-- [ ] Arrays properly declared: `declare -a` / `declare -A`
-- [ ] Arithmetic in `$(( ))` not `$[ ]`
-- [ ] `[[ ]]` not `[ ]` for conditionals
-- [ ] `local` for function variables
-- [ ] Proper error handling with `set -euo pipefail`
-- [ ] No useless use of cat/echo
-- [ ] Parameter expansion over sed/awk when possible
+### Rust
+- [ ] No `unwrap()` in production code
+- [ ] No unnecessary `.clone()`
+- [ ] Exhaustive match on own enums
+- [ ] `cargo clippy` passes
+- [ ] `cargo test` passes
+- [ ] Error types with `Display` impl
 
-## Audio-Specific Checks
-
-- [ ] Frequencies calculated with equal temperament
+### Audio
+- [ ] Equal temperament frequency calculations
 - [ ] Sample rate consistent (44100 Hz)
-- [ ] 16-bit signed samples (-32768 to 32767)
+- [ ] 16-bit signed samples clamped to `i16` range
 - [ ] Little-endian byte order for WAV
-- [ ] No clipping (amplitude within bounds)
 - [ ] Correct RIFF chunk sizes
 
-## Chess-Specific Checks
-
+### Chess
 - [ ] Algebraic notation correctly parsed
 - [ ] Board state updated after each move
 - [ ] Disambiguation handled (Rad1 vs Rfd1)
 - [ ] Special moves: castling, en passant, promotion
-
-## Skill Workflow
-
-```
-ROADMAP.md
-    │
-    ▼
-/po      → Creates PRD from ROADMAP
-    │
-    ▼
-/analyst → Creates SPEC from PRD (with tasks)
-    │
-    ▼
-/tdd     → Implements tasks from SPEC
-    │
-    ▼
-/review  → Quality gate before merge ← YOU ARE HERE
-    │
-    ▼
-/commit  → Commits completed work
-```
 
 ## When to Review
 

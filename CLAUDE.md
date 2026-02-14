@@ -203,11 +203,26 @@ Run tests: `cargo test`
 
 ## Skills
 
-Rust specialist maintaining production-grade Rust systems. Expertise in:
-- Zero-dependency implementations
-- Binary I/O and audio processing
-- Performance optimization
-- Idiomatic Rust patterns
+### Development Pipeline
 
-Available project skills:
-- `/address-pr-comments` - Fetch PR review comments, group by file/category, propose actionable code changes
+Skills form a sequential pipeline from idea to shipped code:
+
+```
+ROADMAP.md -> /po -> /analyst -> /tdd -> /review -> /commit
+```
+
+| Skill | Purpose | When to Use |
+|-------|---------|-------------|
+| `/po` | Create PRD from ROADMAP | Starting a new feature, defining requirements |
+| `/analyst` | Create SPEC from PRD | Breaking a PRD into implementable tasks |
+| `/tdd` | Implement tasks from SPEC | Building features with red-green-refactor |
+| `/review` | Code review (Rust, audio, chess, safety) | After implementation, before merge |
+| `/commit` | Git commit following conventions | After tests pass |
+
+### Standalone Skills
+
+| Skill | Purpose | When to Use |
+|-------|---------|-------------|
+| `/bug-finder` | Edge case hunting, stress testing | Something feels fragile, need to break it |
+| `/synth` | Audio synthesis reference (WAV, waveforms, ADSR) | Working on audio modules |
+| `/address-pr-comments` | Fetch and address PR review comments | After receiving PR feedback |
