@@ -245,7 +245,7 @@ impl Board {
 fn is_castling(notation: &str) -> bool {
     let clean: String = notation
         .chars()
-        .filter(|ch| !matches!(ch, '+' | '#'))
+        .filter(|character| !matches!(character, '+' | '#'))
         .collect();
     clean == "O-O" || clean == "O-O-O"
 }
@@ -277,7 +277,7 @@ fn strip_annotations(notation: &str) -> String {
         .next()
         .unwrap_or(notation)
         .chars()
-        .filter(|ch| !matches!(ch, '+' | '#' | '!' | '?' | 'x' | '-'))
+        .filter(|character| !matches!(character, '+' | '#' | '!' | '?' | 'x' | '-'))
         .collect()
 }
 
@@ -292,15 +292,15 @@ fn extract_hints(clean: &str, piece: Piece) -> (Option<u8>, Option<u8>) {
         return (None, None);
     }
 
-    let middle = &clean[1..clean.len() - 2];
+    let disambiguation = &clean[1..clean.len() - 2];
     let mut file_hint = None;
     let mut rank_hint = None;
 
-    for ch in middle.chars() {
-        if ('a'..='h').contains(&ch) {
-            file_hint = Some(ch as u8 - b'a');
-        } else if ('1'..='8').contains(&ch) {
-            rank_hint = Some(ch as u8 - b'1');
+    for hint_char in disambiguation.chars() {
+        if ('a'..='h').contains(&hint_char) {
+            file_hint = Some(hint_char as u8 - b'a');
+        } else if ('1'..='8').contains(&hint_char) {
+            rank_hint = Some(hint_char as u8 - b'1');
         }
     }
 
@@ -310,9 +310,9 @@ fn extract_hints(clean: &str, piece: Piece) -> (Option<u8>, Option<u8>) {
 fn extract_pawn_hints(clean: &str) -> (Option<u8>, Option<u8>) {
     // Pawn captures like "exd5" → clean is "ed5", file hint is 'e' (file 4)
     if clean.len() > 2 {
-        let first = clean.chars().next().unwrap();
-        if ('a'..='h').contains(&first) {
-            return (Some(first as u8 - b'a'), None);
+        let source_file = clean.chars().next().unwrap();
+        if ('a'..='h').contains(&source_file) {
+            return (Some(source_file as u8 - b'a'), None);
         }
     }
     (None, None)
