@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::chess::{Piece, Square};
+use crate::chess::{Move, Piece, Square};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
@@ -48,29 +48,69 @@ impl Board {
         self.squares[rank as usize][file as usize]
     }
 
-    fn set(&mut self, file: u8, rank: u8, piece: Option<(Piece, Color)>) {
-        self.squares[rank as usize][file as usize] = piece;
+    fn set(&mut self, file: u8, rank: u8, piece: (Piece, Color)) {
+        self.squares[rank as usize][file as usize] = Some(piece);
     }
 
-    pub fn apply_move(&mut self, m: &ParsedMove) {
-        let piece_on_origin = self.get(m.origin.file, m.origin.rank);
-        self.set(m.origin.file, m.origin.rank, None);
+    fn clear_square(&mut self, file: u8, rank: u8) {
+        self.squares[rank as usize][file as usize] = None;
+    }
 
-        if let Some(promo) = m.promotion {
-            let color = piece_on_origin.map(|(_, c)| c).unwrap_or(Color::White);
-            self.set(m.dest.file, m.dest.rank, Some((promo, color)));
+    /// Resolves algebraic notation into a fully-specified move with origin, destination,
+    /// and any special move data (castling rook, promotion).
+    pub fn resolve_move(
+        &self,
+        chess_move: &Move,
+        notation: &str,
+        color: Color,
+    ) -> Option<ParsedMove> {
+        if is_castling(notation) {
+            return resolve_castling(chess_move, color);
+        }
+
+        let clean = strip_annotations(notation);
+        let (file_hint, rank_hint) = extract_hints(&clean, chess_move.piece);
+
+        let origin = self.find_origin(
+            chess_move.piece,
+            &chess_move.dest,
+            color,
+            file_hint,
+            rank_hint,
+        )?;
+
+        Some(ParsedMove {
+            origin,
+            dest: chess_move.dest,
+            promotion: chess_move.promotion,
+            castling_rook: None,
+        })
+    }
+
+    pub fn apply_move(&mut self, parsed: &ParsedMove) {
+        // Move the piece from origin to destination (handles king in castling too)
+        let piece_on_origin = self.get(parsed.origin.file, parsed.origin.rank);
+        self.clear_square(parsed.origin.file, parsed.origin.rank);
+
+        if let Some(promoted_piece) = parsed.promotion {
+            let color = piece_on_origin
+                .map(|(_, color)| color)
+                .expect("piece must exist at origin for promotion");
+            self.set(parsed.dest.file, parsed.dest.rank, (promoted_piece, color));
         } else {
-            self.set(m.dest.file, m.dest.rank, piece_on_origin);
+            // Captured pieces (if any) are simply overwritten — no tracking yet
+            self.squares[parsed.dest.rank as usize][parsed.dest.file as usize] = piece_on_origin;
         }
 
-        if let Some((rook_from, rook_to)) = m.castling_rook {
+        // Castling: the king was already moved above; now move the rook
+        if let Some((rook_from, rook_to)) = parsed.castling_rook {
             let rook = self.get(rook_from.file, rook_from.rank);
-            self.set(rook_from.file, rook_from.rank, None);
-            self.set(rook_to.file, rook_to.rank, rook);
+            self.clear_square(rook_from.file, rook_from.rank);
+            self.squares[rook_to.rank as usize][rook_to.file as usize] = rook;
         }
     }
 
-    pub fn find_origin(
+    fn find_origin(
         &self,
         piece: Piece,
         dest: &Square,
@@ -80,17 +120,18 @@ impl Board {
     ) -> Option<Square> {
         for rank in 0..8u8 {
             for file in 0..8u8 {
-                if let Some((p, c)) = self.get(file, rank) {
-                    if p != piece || c != color {
+                if let Some((found_piece, found_color)) = self.get(file, rank) {
+                    if found_piece != piece || found_color != color {
                         continue;
                     }
-                    if let Some(fh) = file_hint
-                        && file != fh
+                    // Skip square if disambiguation hint doesn't match
+                    if let Some(hint_file) = file_hint
+                        && file != hint_file
                     {
                         continue;
                     }
-                    if let Some(rh) = rank_hint
-                        && rank != rh
+                    if let Some(hint_rank) = rank_hint
+                        && rank != hint_rank
                     {
                         continue;
                     }
@@ -106,13 +147,13 @@ impl Board {
     fn can_reach(&self, piece: Piece, color: Color, file: u8, rank: u8, dest: &Square) -> bool {
         match piece {
             Piece::Pawn => self.pawn_can_reach(color, file, rank, dest),
-            Piece::Knight => Self::knight_can_reach(file, rank, dest),
+            Piece::Knight => self.knight_can_reach(file, rank, dest),
             Piece::Bishop => self.bishop_can_reach(file, rank, dest),
             Piece::Rook => self.rook_can_reach(file, rank, dest),
             Piece::Queen => {
                 self.bishop_can_reach(file, rank, dest) || self.rook_can_reach(file, rank, dest)
             }
-            Piece::King => Self::king_can_reach(file, rank, dest),
+            Piece::King => self.king_can_reach(file, rank, dest),
         }
     }
 
@@ -121,70 +162,166 @@ impl Board {
             Color::White => (1, 1),
             Color::Black => (-1, 6),
         };
-        let df = (dest.file as i8) - (file as i8);
-        let dr = (dest.rank as i8) - (rank as i8);
+        let file_distance = (dest.file as i8) - (file as i8);
+        let rank_distance = (dest.rank as i8) - (rank as i8);
 
-        if df == 0 && dr == direction && self.get(dest.file, dest.rank).is_none() {
+        if file_distance == 0
+            && rank_distance == direction
+            && self.get(dest.file, dest.rank).is_none()
+        {
             return true;
         }
-        if df == 0 && dr == 2 * direction && rank == start_rank {
+        if file_distance == 0 && rank_distance == 2 * direction && rank == start_rank {
             let mid_rank = (rank as i8 + direction) as u8;
             if self.get(file, mid_rank).is_none() && self.get(dest.file, dest.rank).is_none() {
                 return true;
             }
         }
-        if df.abs() == 1 && dr == direction {
+        if file_distance.abs() == 1 && rank_distance == direction {
             return true;
         }
         false
     }
 
-    fn knight_can_reach(file: u8, rank: u8, dest: &Square) -> bool {
-        let df = ((dest.file as i8) - (file as i8)).abs();
-        let dr = ((dest.rank as i8) - (rank as i8)).abs();
-        (df == 2 && dr == 1) || (df == 1 && dr == 2)
+    fn knight_can_reach(&self, file: u8, rank: u8, dest: &Square) -> bool {
+        let file_distance = ((dest.file as i8) - (file as i8)).abs();
+        let rank_distance = ((dest.rank as i8) - (rank as i8)).abs();
+        (file_distance == 2 && rank_distance == 1) || (file_distance == 1 && rank_distance == 2)
     }
 
     fn bishop_can_reach(&self, file: u8, rank: u8, dest: &Square) -> bool {
-        let df = (dest.file as i8) - (file as i8);
-        let dr = (dest.rank as i8) - (rank as i8);
-        if df.abs() != dr.abs() || df == 0 {
+        let file_distance = (dest.file as i8) - (file as i8);
+        let rank_distance = (dest.rank as i8) - (rank as i8);
+        if file_distance.abs() != rank_distance.abs() || file_distance == 0 {
             return false;
         }
-        self.path_clear(file, rank, dest, df.signum(), dr.signum())
+        self.path_clear(
+            file,
+            rank,
+            dest,
+            file_distance.signum(),
+            rank_distance.signum(),
+        )
     }
 
     fn rook_can_reach(&self, file: u8, rank: u8, dest: &Square) -> bool {
-        let df = (dest.file as i8) - (file as i8);
-        let dr = (dest.rank as i8) - (rank as i8);
-        if (df != 0 && dr != 0) || (df == 0 && dr == 0) {
+        let file_distance = (dest.file as i8) - (file as i8);
+        let rank_distance = (dest.rank as i8) - (rank as i8);
+        if (file_distance != 0 && rank_distance != 0) || (file_distance == 0 && rank_distance == 0)
+        {
             return false;
         }
-        self.path_clear(file, rank, dest, df.signum(), dr.signum())
+        self.path_clear(
+            file,
+            rank,
+            dest,
+            file_distance.signum(),
+            rank_distance.signum(),
+        )
     }
 
-    fn king_can_reach(file: u8, rank: u8, dest: &Square) -> bool {
-        let df = ((dest.file as i8) - (file as i8)).abs();
-        let dr = ((dest.rank as i8) - (rank as i8)).abs();
-        df <= 1 && dr <= 1 && (df + dr) > 0
+    fn king_can_reach(&self, file: u8, rank: u8, dest: &Square) -> bool {
+        let file_distance = ((dest.file as i8) - (file as i8)).abs();
+        let rank_distance = ((dest.rank as i8) - (rank as i8)).abs();
+        file_distance <= 1 && rank_distance <= 1 && (file_distance + rank_distance) > 0
     }
 
-    fn path_clear(&self, file: u8, rank: u8, dest: &Square, df: i8, dr: i8) -> bool {
-        let mut f = file as i8 + df;
-        let mut r = rank as i8 + dr;
-        while f != dest.file as i8 || r != dest.rank as i8 {
-            if self.get(f as u8, r as u8).is_some() {
+    fn path_clear(&self, file: u8, rank: u8, dest: &Square, file_step: i8, rank_step: i8) -> bool {
+        let mut current_file = file as i8 + file_step;
+        let mut current_rank = rank as i8 + rank_step;
+        while current_file != dest.file as i8 || current_rank != dest.rank as i8 {
+            if self.get(current_file as u8, current_rank as u8).is_some() {
                 return false;
             }
-            f += df;
-            r += dr;
+            current_file += file_step;
+            current_rank += rank_step;
         }
         true
     }
 }
 
-fn piece_char(piece: Piece, color: Color) -> char {
-    let c = match piece {
+// --- Move resolution helpers (disambiguation, castling) ---
+
+fn is_castling(notation: &str) -> bool {
+    let clean: String = notation
+        .chars()
+        .filter(|ch| !matches!(ch, '+' | '#'))
+        .collect();
+    clean == "O-O" || clean == "O-O-O"
+}
+
+fn resolve_castling(chess_move: &Move, color: Color) -> Option<ParsedMove> {
+    let rank = match color {
+        Color::White => 0,
+        Color::Black => 7,
+    };
+
+    let kingside = chess_move.dest.file == 6;
+    let (rook_from, rook_to) = if kingside {
+        (Square { file: 7, rank }, Square { file: 5, rank })
+    } else {
+        (Square { file: 0, rank }, Square { file: 3, rank })
+    };
+
+    Some(ParsedMove {
+        origin: Square { file: 4, rank },
+        dest: chess_move.dest,
+        promotion: None,
+        castling_rook: Some((rook_from, rook_to)),
+    })
+}
+
+fn strip_annotations(notation: &str) -> String {
+    notation
+        .split('=')
+        .next()
+        .unwrap_or(notation)
+        .chars()
+        .filter(|ch| !matches!(ch, '+' | '#' | '!' | '?' | 'x' | '-'))
+        .collect()
+}
+
+fn extract_hints(clean: &str, piece: Piece) -> (Option<u8>, Option<u8>) {
+    if piece == Piece::Pawn {
+        return extract_pawn_hints(clean);
+    }
+
+    // For pieces: first char is piece letter, last 2 are destination.
+    // Anything in between is a disambiguation hint (e.g., "Rad1" → 'a' is file hint).
+    if clean.len() <= 3 {
+        return (None, None);
+    }
+
+    let middle = &clean[1..clean.len() - 2];
+    let mut file_hint = None;
+    let mut rank_hint = None;
+
+    for ch in middle.chars() {
+        if ('a'..='h').contains(&ch) {
+            file_hint = Some(ch as u8 - b'a');
+        } else if ('1'..='8').contains(&ch) {
+            rank_hint = Some(ch as u8 - b'1');
+        }
+    }
+
+    (file_hint, rank_hint)
+}
+
+fn extract_pawn_hints(clean: &str) -> (Option<u8>, Option<u8>) {
+    // Pawn captures like "exd5" → clean is "ed5", file hint is 'e' (file 4)
+    if clean.len() > 2 {
+        let first = clean.chars().next().unwrap();
+        if ('a'..='h').contains(&first) {
+            return (Some(first as u8 - b'a'), None);
+        }
+    }
+    (None, None)
+}
+
+// --- Display ---
+
+fn piece_symbol(piece: Piece, color: Color) -> char {
+    let symbol = match piece {
         Piece::Pawn => 'P',
         Piece::Knight => 'N',
         Piece::Bishop => 'B',
@@ -193,8 +330,8 @@ fn piece_char(piece: Piece, color: Color) -> char {
         Piece::King => 'K',
     };
     match color {
-        Color::White => c,
-        Color::Black => c.to_ascii_lowercase(),
+        Color::White => symbol,
+        Color::Black => symbol.to_ascii_lowercase(),
     }
 }
 
@@ -203,11 +340,11 @@ impl fmt::Display for Board {
         for rank in (0..8).rev() {
             write!(f, "  {} |", rank + 1)?;
             for file in 0..8 {
-                let ch = match self.squares[rank][file] {
-                    Some((piece, color)) => piece_char(piece, color),
+                let symbol = match self.squares[rank][file] {
+                    Some((piece, color)) => piece_symbol(piece, color),
                     None => '.',
                 };
-                write!(f, " {ch}")?;
+                write!(f, " {symbol}")?;
             }
             writeln!(f)?;
         }
@@ -267,13 +404,13 @@ mod tests {
     #[test]
     fn apply_simple_move() {
         let mut board = Board::new();
-        let m = ParsedMove {
+        let parsed = ParsedMove {
             origin: Square { file: 4, rank: 1 },
             dest: Square { file: 4, rank: 3 },
             promotion: None,
             castling_rook: None,
         };
-        board.apply_move(&m);
+        board.apply_move(&parsed);
         assert_eq!(board.get(4, 1), None);
         assert_eq!(board.get(4, 3), Some((Piece::Pawn, Color::White)));
     }
@@ -281,15 +418,15 @@ mod tests {
     #[test]
     fn apply_castling_kingside_white() {
         let mut board = Board::new();
-        board.set(5, 0, None);
-        board.set(6, 0, None);
-        let m = ParsedMove {
+        board.clear_square(5, 0);
+        board.clear_square(6, 0);
+        let parsed = ParsedMove {
             origin: Square { file: 4, rank: 0 },
             dest: Square { file: 6, rank: 0 },
             promotion: None,
             castling_rook: Some((Square { file: 7, rank: 0 }, Square { file: 5, rank: 0 })),
         };
-        board.apply_move(&m);
+        board.apply_move(&parsed);
         assert_eq!(board.get(6, 0), Some((Piece::King, Color::White)));
         assert_eq!(board.get(5, 0), Some((Piece::Rook, Color::White)));
         assert_eq!(board.get(4, 0), None);
@@ -299,15 +436,15 @@ mod tests {
     #[test]
     fn apply_promotion() {
         let mut board = Board::new();
-        board.set(4, 6, Some((Piece::Pawn, Color::White)));
-        board.set(4, 7, None);
-        let m = ParsedMove {
+        board.set(4, 6, (Piece::Pawn, Color::White));
+        board.clear_square(4, 7);
+        let parsed = ParsedMove {
             origin: Square { file: 4, rank: 6 },
             dest: Square { file: 4, rank: 7 },
             promotion: Some(Piece::Queen),
             castling_rook: None,
         };
-        board.apply_move(&m);
+        board.apply_move(&parsed);
         assert_eq!(board.get(4, 7), Some((Piece::Queen, Color::White)));
         assert_eq!(board.get(4, 6), None);
     }
@@ -331,8 +468,8 @@ mod tests {
     #[test]
     fn find_origin_with_file_hint() {
         let mut board = Board::new();
-        board.set(0, 3, Some((Piece::Rook, Color::White)));
-        board.set(7, 3, Some((Piece::Rook, Color::White)));
+        board.set(0, 3, (Piece::Rook, Color::White));
+        board.set(7, 3, (Piece::Rook, Color::White));
         let dest = Square { file: 3, rank: 3 };
         let origin = board.find_origin(Piece::Rook, &dest, Color::White, Some(0), None);
         assert_eq!(origin, Some(Square { file: 0, rank: 3 }));
@@ -350,7 +487,7 @@ mod tests {
     #[test]
     fn pawn_double_push_blocked() {
         let mut board = Board::new();
-        board.set(4, 2, Some((Piece::Pawn, Color::Black)));
+        board.set(4, 2, (Piece::Pawn, Color::Black));
         let dest = Square { file: 4, rank: 3 };
         let origin = board.find_origin(Piece::Pawn, &dest, Color::White, None, None);
         assert_eq!(origin, None);

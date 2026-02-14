@@ -57,6 +57,20 @@ Ranks 1-8 map to octaves (lower to higher).
 - Self-documenting function names
 - `cargo clippy` must pass with no warnings
 
+## TDD — Mandatory
+
+**All code changes (features, bug fixes, refactoring) MUST follow TDD unless the user explicitly asks to write tests after.**
+
+This is not optional. Agents must use the TDD approach by default:
+
+1. **RED** — Write one failing test. Run `cargo test`. It **must fail**. If it passes after multiple attempts to make it fail, ask the user for intervention.
+2. **GREEN** — Write the minimum code to make the test pass. Run `cargo test`. It **must pass**. If it fails after multiple fix attempts, ask the user for intervention.
+3. **REFACTOR** — Invoke `/refactor` on the changed code and its boundaries. Baby steps only. Tests must stay green after each refactor step.
+
+**Baby steps**: one test at a time, one small change at a time. Never write multiple tests before making them pass. Never write large chunks of production code without a failing test driving it.
+
+**Loop**: repeat RED → GREEN → REFACTOR for each behavior increment until the task is complete.
+
 ## Codebase Conventions
 
 ### Naming — Favor Meaning Over Brevity

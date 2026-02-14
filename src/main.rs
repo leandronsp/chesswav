@@ -29,6 +29,7 @@ use chesswav::audio;
 use chesswav::repl;
 
 fn main() {
+    // CLI modes: --play/-p for audio playback, --interactive/-i for REPL
     let args: Vec<String> = std::env::args().collect();
     let play_mode: bool = args.iter().any(|a| a == "--play" || a == "-p");
     let interactive: bool = args.iter().any(|a| a == "--interactive" || a == "-i");
