@@ -88,6 +88,13 @@ impl Square {
     }
 }
 
+pub struct ParsedMove {
+    pub origin: Square,
+    pub dest: Square,
+    pub promotion: Option<Piece>,
+    pub castling_rook: Option<(Square, Square)>,
+}
+
 /// A chess move parsed from algebraic notation.
 #[derive(Debug, PartialEq)]
 pub struct Move {
@@ -376,5 +383,19 @@ mod tests {
     fn promotion_to_rook() {
         let m = Move::parse("a1=R", 1).unwrap();
         assert_eq!(m.promotion, Some(Piece::Rook));
+    }
+
+    #[test]
+    fn parsed_move_construction() {
+        let parsed = ParsedMove {
+            origin: Square { file: 4, rank: 1 },
+            dest: Square { file: 4, rank: 3 },
+            promotion: None,
+            castling_rook: None,
+        };
+        assert_eq!(parsed.origin, Square { file: 4, rank: 1 });
+        assert_eq!(parsed.dest, Square { file: 4, rank: 3 });
+        assert_eq!(parsed.promotion, None);
+        assert_eq!(parsed.castling_rook, None);
     }
 }
