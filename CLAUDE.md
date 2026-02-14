@@ -71,6 +71,8 @@ This is not optional. Agents must use the TDD approach by default:
 
 **Loop**: repeat RED → GREEN → REFACTOR for each behavior increment until the task is complete.
 
+**Before writing any code, always read the `/tdd` skill** (`.claude/skills/tdd/SKILL.md`) for the full process, retry thresholds, and escalation rules.
+
 ## Codebase Conventions
 
 ### Naming — Favor Meaning Over Brevity
@@ -222,7 +224,7 @@ Run tests: `cargo test`
 Skills form a sequential pipeline from idea to shipped code:
 
 ```
-ROADMAP.md -> /po -> /analyst -> /tdd -> /review -> /commit
+ROADMAP.md -> /po -> /analyst -> /tdd (-> /refactor) -> /review -> /commit
 ```
 
 | Skill | Purpose | When to Use |
@@ -230,6 +232,7 @@ ROADMAP.md -> /po -> /analyst -> /tdd -> /review -> /commit
 | `/po` | Create PRD from ROADMAP | Starting a new feature, defining requirements |
 | `/analyst` | Create SPEC from PRD | Breaking a PRD into implementable tasks |
 | `/tdd` | Implement tasks from SPEC | Building features with red-green-refactor |
+| `/refactor` | Baby-step cleanup after green | Called by `/tdd` after each GREEN phase |
 | `/review` | Code review (Rust, audio, chess, safety) | After implementation, before merge |
 | `/commit` | Git commit following conventions | After tests pass |
 
