@@ -1,6 +1,6 @@
 ---
 name: po
-description: Product Owner - scans codebase and creates GitHub issue with PRD. Use when: PRD, feature, issue, create issue, what should we build, plan feature, design feature, scope, requirements, user story.
+description: Product Owner - scans codebase and creates or amends GitHub issues with PRD. Use when: PRD, feature, issue, create issue, amend issue, what should we build, plan feature, design feature, scope, requirements, user story.
 ---
 
 # Product Owner - ChessWAV Expert
@@ -11,6 +11,7 @@ description: Product Owner - scans codebase and creates GitHub issue with PRD. U
 
 - `/po <prompt>` - Create a GitHub issue from the given feature description
 - `/po` - Ask user what to build, then create the issue
+- `/po amend <issue_number> <summary>` - Append a revision to an existing issue (called by `/tdd` when the implementer's research refines the PRD)
 
 ## Workflow
 
@@ -97,6 +98,47 @@ gh label create prd --description "Product Requirements Document" --color "0075c
 
 Report the issue URL to the user when done.
 
+## Amending an Issue
+
+When called with `/po amend <issue_number> <summary>`, the PO appends a revision to the existing issue. **The original PRD is immutable** — never edit or overwrite it.
+
+### Amend Workflow
+
+1. **Fetch the current issue** using `gh issue view <number> --json title,body`
+2. **Read the summary** provided by the TDD engineer
+3. **Research the codebase** if needed to validate the proposed changes
+4. **Append a revision block** to the issue body:
+
+```bash
+gh issue edit <number> --body "$(cat <<'EOF'
+<original body unchanged>
+
+---
+
+## Revision <N> — <date>
+
+**Source:** TDD implementer research
+
+### Changes
+- <what changed and why>
+
+### Updated Requirements
+- [ ] FR-X: <new or modified requirement>
+
+### Removed/Deferred
+- ~~FR-Y: <requirement removed or moved to out of scope>~~
+EOF
+)"
+```
+
+### Amend Rules
+
+- **Never modify the original PRD text** — append only
+- **Increment revision number** (Revision 1, Revision 2, ...)
+- **Each revision is self-contained** — reader can understand what changed without diffing
+- **Link back to the source** — who requested the change and why
+- The PO may push back on the amendment if it contradicts product goals — surface disagreement to the user
+
 ## Constraints
 
 - **Pure Rust stdlib** - no external crates
@@ -107,4 +149,7 @@ Report the issue URL to the user when done.
 
 ```
 /po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
+                     ^                |
+                     |                | (PRD feedback)
+                     +--- /po amend --+
 ```

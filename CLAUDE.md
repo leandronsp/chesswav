@@ -221,16 +221,19 @@ Run tests: `cargo test`
 
 ### Development Pipeline
 
-Skills form a sequential pipeline from idea to shipped code:
+Skills form a pipeline from idea to shipped code, with a feedback loop between implementer and PO:
 
 ```
 /po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
+                     ^                |
+                     |                | (PRD feedback)
+                     +--- /po amend --+
 ```
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
-| `/po` | Scan codebase, create GitHub issue with PRD | Starting a new feature, defining requirements |
-| `/tdd` | Fetch issue, plan, implement with red-green-refactor | Building features from GitHub issues |
+| `/po` | Scan codebase, create/amend GitHub issue with PRD | Starting a new feature, defining requirements, amending PRD after implementer feedback |
+| `/tdd` | Fetch issue, research, plan, implement with red-green-refactor | Building features from GitHub issues |
 | `/refactor` | Baby-step cleanup after green | Called by `/tdd` after each GREEN phase |
 | `/review` | Code review + techdebt audit, plan fixes | After implementation, before PR |
 | `/techdebt` | Audit diff for pattern deviations and code smells | Called by `/review` and `/pr` |

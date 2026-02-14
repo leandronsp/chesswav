@@ -18,26 +18,49 @@ description: Implementer - fetches a GitHub issue, builds an implementation plan
 ### Phase 1: Understand
 
 1. **Fetch the issue** using `gh issue view <number> --json title,body`
-2. **Scan the codebase** to understand what exists:
+2. **Research the codebase independently** — don't assume the PRD covers everything:
    - Read `src/lib.rs` for module structure
-   - Explore relevant source files
-   - Understand existing types, traits, and patterns
+   - Explore all source files relevant to the issue (read them, don't skim)
+   - Understand existing types, traits, patterns, and conventions in use
+   - Trace call paths and data flow through the affected areas
+   - Look for edge cases, constraints, or existing behavior the PRD may not mention
+   - Check tests for implicit contracts and expected behavior
 3. **Identify the gap** between current state and what the issue requires
+4. **Challenge the PRD** if research reveals:
+   - Missing requirements or overlooked edge cases
+   - A better technical approach than what was suggested
+   - Existing code that already partially solves the problem
+   - Constraints or dependencies the PRD didn't account for
+   - Requirements that are infeasible, overly complex, or conflict with existing code
+   - Scope that should be split into separate issues
+
+### Phase 1.5: PRD Feedback (when needed)
+
+If Phase 1 research uncovered issues with the PRD, **argue your case before planning**:
+
+5. **Present findings to the user** — explain what you found and what you'd change
+6. **If user agrees**, invoke `/po amend <issue_number>` with a summary of the changes:
+   - The PO will append a revision to the issue (original PRD stays intact)
+   - Wait for the amended issue before proceeding to Phase 2
+7. **If user disagrees**, proceed with the PRD as-is — note the disagreement in the plan
+
+This is not a formality. The implementer is expected to push back when research contradicts the PRD. Better to fix the spec than to build the wrong thing.
 
 ### Phase 2: Plan
 
-4. **Enter plan mode** to design the implementation:
+8. **Enter plan mode** to design the implementation:
+   - Summarize research findings — what exists, what's missing, any PRD amendments
    - Break the issue into ordered implementation tasks (baby steps)
    - Each task = one testable behavior increment
    - Identify files to create/modify
    - Identify new types, functions, error types
    - Note dependencies between tasks
-5. **Present the plan** to the user for approval
+9. **Present the plan** to the user for approval
 
 ### Phase 3: Implement (TDD)
 
-6. **Create a feature branch**: `feature/<short-name>`
-7. **For each task**, follow the RED-GREEN-REFACTOR cycle below
+10. **Create a feature branch**: `feature/<short-name>`
+11. **For each task**, follow the RED-GREEN-REFACTOR cycle below
 
 ## The Cycle
 
@@ -119,4 +142,7 @@ For each task:
 
 ```
 /po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
+                     ^                |
+                     |                | (PRD feedback)
+                     +--- /po amend --+
 ```
