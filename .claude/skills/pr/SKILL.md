@@ -59,7 +59,13 @@ git log main..HEAD --oneline
 git diff main...HEAD --stat
 ```
 
-### 3. Check if PR already exists
+### 3.5. Identify source issue
+
+If the PR was created from a `/tdd <issue>` workflow, you already have the issue number in context. Otherwise, check the branch name or commit messages for issue references.
+
+If an issue is identified, it will be linked in the PR body using a GitHub closing keyword (see template below). When the PR is merged, GitHub automatically closes the linked issue and marks it as "completed".
+
+### 4. Check if PR already exists
 
 ```bash
 gh pr view --json number,title,body 2>/dev/null
@@ -105,6 +111,8 @@ Rules:
 ## PR Body Template
 
 ```markdown
+Closes #<issue_number>
+
 ## Summary
 
 1-2 paragraphs explaining what this does and why.
@@ -124,6 +132,8 @@ Rules:
 
 - [ ] `/techdebt` audit passed (no Critical items)
 ```
+
+Omit the `Closes #...` line if there is no source issue.
 
 ## Style
 
