@@ -1,6 +1,5 @@
-use std::fmt;
-
-use crate::chess::{Move, Piece, Square};
+use crate::chess::{NotationMove, Piece, ResolvedMove, Square};
+use crate::hint::{extract_hints, is_castling, resolve_castling, strip_annotations};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {
@@ -60,10 +59,10 @@ impl Board {
     /// and any special move data (castling rook, promotion).
     pub fn resolve_move(
         &self,
-        chess_move: &Move,
+        chess_move: &NotationMove,
         notation: &str,
         color: Color,
-    ) -> Option<ParsedMove> {
+    ) -> Option<ResolvedMove> {
         if is_castling(notation) {
             return resolve_castling(chess_move, color);
         }
@@ -79,7 +78,7 @@ impl Board {
             rank_hint,
         )?;
 
-        Some(ParsedMove {
+        Some(ResolvedMove {
             origin,
             dest: chess_move.dest,
             promotion: chess_move.promotion,
@@ -87,7 +86,7 @@ impl Board {
         })
     }
 
-    pub fn apply_move(&mut self, parsed: &ParsedMove) {
+    pub fn apply_move(&mut self, parsed: &ResolvedMove) {
         // Move the piece from origin to destination (handles king in castling too)
         let piece_on_origin = self.get(parsed.origin.file, parsed.origin.rank);
         self.clear_square(parsed.origin.file, parsed.origin.rank);
@@ -240,127 +239,6 @@ impl Board {
     }
 }
 
-// --- Move resolution helpers (disambiguation, castling) ---
-
-fn is_castling(notation: &str) -> bool {
-    let clean: String = notation
-        .chars()
-        .filter(|character| !matches!(character, '+' | '#'))
-        .collect();
-    clean == "O-O" || clean == "O-O-O"
-}
-
-fn resolve_castling(chess_move: &Move, color: Color) -> Option<ParsedMove> {
-    let rank = match color {
-        Color::White => 0,
-        Color::Black => 7,
-    };
-
-    let kingside = chess_move.dest.file == 6;
-    let (rook_from, rook_to) = if kingside {
-        (Square { file: 7, rank }, Square { file: 5, rank })
-    } else {
-        (Square { file: 0, rank }, Square { file: 3, rank })
-    };
-
-    Some(ParsedMove {
-        origin: Square { file: 4, rank },
-        dest: chess_move.dest,
-        promotion: None,
-        castling_rook: Some((rook_from, rook_to)),
-    })
-}
-
-fn strip_annotations(notation: &str) -> String {
-    notation
-        .split('=')
-        .next()
-        .unwrap_or(notation)
-        .chars()
-        .filter(|character| !matches!(character, '+' | '#' | '!' | '?' | 'x' | '-'))
-        .collect()
-}
-
-fn extract_hints(clean: &str, piece: Piece) -> (Option<u8>, Option<u8>) {
-    if piece == Piece::Pawn {
-        return extract_pawn_hints(clean);
-    }
-
-    // For pieces: first char is piece letter, last 2 are destination.
-    // Anything in between is a disambiguation hint (e.g., "Rad1" → 'a' is file hint).
-    if clean.len() <= 3 {
-        return (None, None);
-    }
-
-    let disambiguation = &clean[1..clean.len() - 2];
-    let mut file_hint = None;
-    let mut rank_hint = None;
-
-    for hint_char in disambiguation.chars() {
-        if ('a'..='h').contains(&hint_char) {
-            file_hint = Some(hint_char as u8 - b'a');
-        } else if ('1'..='8').contains(&hint_char) {
-            rank_hint = Some(hint_char as u8 - b'1');
-        }
-    }
-
-    (file_hint, rank_hint)
-}
-
-fn extract_pawn_hints(clean: &str) -> (Option<u8>, Option<u8>) {
-    // Pawn captures like "exd5" → clean is "ed5", file hint is 'e' (file 4)
-    if clean.len() > 2 {
-        let source_file = clean.chars().next().unwrap();
-        if ('a'..='h').contains(&source_file) {
-            return (Some(source_file as u8 - b'a'), None);
-        }
-    }
-    (None, None)
-}
-
-// --- Display ---
-
-fn piece_symbol(piece: Piece, color: Color) -> char {
-    let symbol = match piece {
-        Piece::Pawn => 'P',
-        Piece::Knight => 'N',
-        Piece::Bishop => 'B',
-        Piece::Rook => 'R',
-        Piece::Queen => 'Q',
-        Piece::King => 'K',
-    };
-    match color {
-        Color::White => symbol,
-        Color::Black => symbol.to_ascii_lowercase(),
-    }
-}
-
-impl fmt::Display for Board {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for rank in (0..8).rev() {
-            write!(f, "  {} |", rank + 1)?;
-            for file in 0..8 {
-                let symbol = match self.squares[rank][file] {
-                    Some((piece, color)) => piece_symbol(piece, color),
-                    None => '.',
-                };
-                write!(f, " {symbol}")?;
-            }
-            writeln!(f)?;
-        }
-        writeln!(f, "    +----------------")?;
-        writeln!(f, "      a b c d e f g h")?;
-        Ok(())
-    }
-}
-
-pub struct ParsedMove {
-    pub origin: Square,
-    pub dest: Square,
-    pub promotion: Option<Piece>,
-    pub castling_rook: Option<(Square, Square)>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -404,7 +282,7 @@ mod tests {
     #[test]
     fn apply_simple_move() {
         let mut board = Board::new();
-        let parsed = ParsedMove {
+        let parsed = ResolvedMove {
             origin: Square { file: 4, rank: 1 },
             dest: Square { file: 4, rank: 3 },
             promotion: None,
@@ -420,7 +298,7 @@ mod tests {
         let mut board = Board::new();
         board.clear_square(5, 0);
         board.clear_square(6, 0);
-        let parsed = ParsedMove {
+        let parsed = ResolvedMove {
             origin: Square { file: 4, rank: 0 },
             dest: Square { file: 6, rank: 0 },
             promotion: None,
@@ -438,7 +316,7 @@ mod tests {
         let mut board = Board::new();
         board.set(4, 6, (Piece::Pawn, Color::White));
         board.clear_square(4, 7);
-        let parsed = ParsedMove {
+        let parsed = ResolvedMove {
             origin: Square { file: 4, rank: 6 },
             dest: Square { file: 4, rank: 7 },
             promotion: Some(Piece::Queen),
@@ -473,15 +351,6 @@ mod tests {
         let dest = Square { file: 3, rank: 3 };
         let origin = board.find_origin(Piece::Rook, &dest, Color::White, Some(0), None);
         assert_eq!(origin, Some(Square { file: 0, rank: 3 }));
-    }
-
-    #[test]
-    fn display_initial_position() {
-        let board = Board::new();
-        let display = format!("{board}");
-        assert!(display.contains("r n b q k b n r"));
-        assert!(display.contains("P P P P P P P P"));
-        assert!(display.contains("a b c d e f g h"));
     }
 
     #[test]

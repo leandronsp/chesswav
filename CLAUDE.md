@@ -1,5 +1,9 @@
 # ChessWAV Project Guidelines
 
+## First Principle: Less Code
+
+No code is better than code. Every line must justify its existence. Before writing, ask: is this really needed? Is it clean, modular, minimal? When hitting too many lines, delete. Prefer deleting code over adding it. A smaller codebase is always better than a larger one.
+
 ## Project Context
 
 ChessWAV transforms chess games into audio. Each move becomes a note, each piece has its timbre, each capture has its drama.

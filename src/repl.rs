@@ -2,7 +2,7 @@ use std::io::{self, BufRead, Write};
 
 use crate::audio;
 use crate::board::{Board, Color};
-use crate::chess::Move;
+use crate::chess::NotationMove;
 
 fn is_white_turn(move_index: usize) -> bool {
     move_index % 2 == 0
@@ -57,7 +57,7 @@ pub fn run() {
             _ => {}
         }
 
-        let chess_move = match Move::parse(input, move_index) {
+        let chess_move = match NotationMove::parse(input, move_index) {
             Some(m) => m,
             None => {
                 println!("  Invalid move: {input}\n");
