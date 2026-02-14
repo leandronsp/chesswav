@@ -1,7 +1,9 @@
 pub mod audio;
 pub mod blend;
+pub mod board;
 pub mod chess;
 pub mod freq;
+pub mod repl;
 pub mod synth;
 pub mod wav;
 pub mod waveform;

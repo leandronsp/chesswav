@@ -1,0 +1,91 @@
+use std::io::{self, BufRead, Write};
+
+use crate::audio;
+use crate::board::{Board, Color};
+use crate::chess::Move;
+
+fn is_white_turn(move_index: usize) -> bool {
+    move_index % 2 == 0
+}
+
+fn full_move_number(move_index: usize) -> usize {
+    move_index / 2 + 1
+}
+
+pub fn run() {
+    let mut board = Board::new();
+    let mut move_index: usize = 0;
+
+    println!();
+    println!("  ChessWAV Interactive Mode");
+    println!("  Type moves in algebraic notation. Commands: reset, quit");
+    println!();
+
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    loop {
+        let side = if is_white_turn(move_index) {
+            "White"
+        } else {
+            "Black"
+        };
+        let move_num = full_move_number(move_index);
+        print!("  [Move {move_num} - {side}] > ");
+        stdout.flush().ok();
+
+        let mut line = String::new();
+        match stdin.lock().read_line(&mut line) {
+            Ok(0) => break,
+            Err(_) => break,
+            _ => {}
+        }
+
+        let input = line.trim();
+        if input.is_empty() {
+            continue;
+        }
+
+        match input {
+            "quit" => break,
+            "reset" => {
+                board = Board::new();
+                move_index = 0;
+                println!("  Game reset.\n");
+                continue;
+            }
+            _ => {}
+        }
+
+        let chess_move = match Move::parse(input, move_index) {
+            Some(m) => m,
+            None => {
+                println!("  Invalid move: {input}\n");
+                continue;
+            }
+        };
+
+        let color = if is_white_turn(move_index) {
+            Color::White
+        } else {
+            Color::Black
+        };
+
+        let parsed = match board.resolve_move(&chess_move, input, color) {
+            Some(p) => p,
+            None => {
+                println!("  No piece found for: {input}\n");
+                continue;
+            }
+        };
+
+        board.apply_move(&parsed);
+
+        let samples = audio::synthesize_move(&chess_move);
+        let wav = audio::to_wav(&samples);
+        audio::play(&wav);
+
+        println!("{board}");
+        move_index += 1;
+    }
+}
