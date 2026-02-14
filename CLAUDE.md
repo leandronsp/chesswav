@@ -224,16 +224,18 @@ Run tests: `cargo test`
 Skills form a sequential pipeline from idea to shipped code:
 
 ```
-ROADMAP.md -> /po -> /analyst -> /tdd (-> /refactor) -> /review -> /commit
+ROADMAP.md -> /po (PRD + issue) -> /analyst -> /tdd (-> /refactor) -> /review (+ /techdebt) -> /pr -> /commit
 ```
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
-| `/po` | Create PRD from ROADMAP | Starting a new feature, defining requirements |
+| `/po` | Create PRD + GitHub issue from ROADMAP | Starting a new feature, defining requirements |
 | `/analyst` | Create SPEC from PRD | Breaking a PRD into implementable tasks |
 | `/tdd` | Implement tasks from SPEC | Building features with red-green-refactor |
 | `/refactor` | Baby-step cleanup after green | Called by `/tdd` after each GREEN phase |
-| `/review` | Code review (Rust, audio, chess, safety) | After implementation, before merge |
+| `/review` | Code review (Rust, audio, chess, safety) | After implementation, before PR |
+| `/techdebt` | Audit diff for pattern deviations and code smells | Called by `/review` and `/pr` before opening PR |
+| `/pr` | Open/update draft PR on GitHub | After review passes, before merge |
 | `/commit` | Git commit following conventions | After tests pass |
 
 ### Standalone Skills

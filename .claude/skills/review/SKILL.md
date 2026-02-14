@@ -100,9 +100,19 @@ A) **Issue**: description
 - [ ] Disambiguation handled (Rad1 vs Rfd1)
 - [ ] Special moves: castling, en passant, promotion
 
+## Tech Debt Gate
+
+Before concluding the review, run `/techdebt` to audit the diff for pattern deviations, code smells, and AI-generated anti-patterns. Any **Critical** items from the tech debt audit must be resolved before the code is ready for PR.
+
 ## When to Review
 
 - After `/tdd` completes a task
-- Before merging feature branches
+- Before opening a PR (`/pr`)
 - When refactoring existing code
 - After bug fixes
+
+## Pipeline
+
+```
+/tdd -> /review (+ /techdebt) -> /pr -> merge
+```
