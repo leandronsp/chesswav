@@ -136,6 +136,7 @@ For each task:
 - [ ] `cargo clippy -- -D warnings`
 - [ ] Repeat for next behavior increment
 - [ ] All task behaviors covered
+- [ ] Update `README.md` if the changes affect project structure, usage, features, or public API
 - [ ] Commit with `/commit`
 
 ## Pipeline

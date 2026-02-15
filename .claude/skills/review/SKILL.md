@@ -20,6 +20,11 @@ If the review finds nothing actionable, skip the plan and report the verdict.
 
 ## Review Priorities
 
+### 0. Documentation
+- Does `README.md` reflect the current project structure, features, and usage?
+- If the changes add/remove/rename modules, files, CLI flags, or features, the README **must** be updated
+- Check the "Project Structure" section against actual `src/` layout
+
 ### 1. Correctness
 - Does the math work? (frequencies, waveforms, byte calculations)
 - Is the chess logic right? (legal moves, board state, disambiguation)
@@ -95,6 +100,11 @@ A) **Issue**: description
 ```
 
 ## Checklists
+
+### Documentation
+- [ ] `README.md` "Project Structure" matches actual `src/` layout
+- [ ] New features/flags documented in README
+- [ ] Removed features/flags cleaned from README
 
 ### Rust
 - [ ] No `unwrap()` in production code

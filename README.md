@@ -145,14 +145,29 @@ Higher ranks = higher octaves. `e5` is an octave above `e4`.
 
 ```
 src/
-├── main.rs      # CLI entry point
-├── lib.rs       # Library exports
-├── chess.rs     # Domain types (Piece, Square, Move, parser)
-├── board.rs     # Board representation
-├── freq.rs      # Square to frequency mapping
-├── synth.rs     # Sine wave generator
-├── wav.rs       # WAV file encoder
-└── audio.rs     # Orchestration (notation → WAV)
+├── main.rs              # CLI entry point
+├── lib.rs               # Library exports
+├── engine/
+│   ├── mod.rs           # Engine module exports
+│   ├── chess.rs         # Domain types (Piece, Square, Move, parser)
+│   ├── board.rs         # Board representation & move execution
+│   └── hint.rs          # Move disambiguation hints
+├── audio/
+│   ├── mod.rs           # Audio module exports
+│   ├── freq.rs          # Square to frequency mapping
+│   ├── synth.rs         # Note synthesis & orchestration
+│   ├── wav.rs           # WAV file encoder
+│   ├── waveform.rs      # Waveform generators (sine, triangle, square, saw)
+│   └── blend.rs         # Waveform blending for composite timbres
+└── tui/
+    ├── mod.rs           # TUI module exports
+    ├── repl.rs          # Interactive REPL
+    └── display/
+        ├── mod.rs       # Display mode abstraction
+        ├── sprite.rs    # Half-block pixel art renderer
+        ├── unicode.rs   # Unicode chess symbol renderer
+        ├── ascii.rs     # Plain text renderer
+        └── colors.rs    # ANSI color support (truecolor/256)
 tests/
 └── integration.rs
 ```
