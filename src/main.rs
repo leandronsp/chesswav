@@ -26,16 +26,26 @@
 use std::io::{self, Read, Write};
 
 use chesswav::audio;
+use chesswav::display;
 use chesswav::repl;
 
 fn main() {
-    // CLI modes: --play/-p for audio playback, --interactive/-i for REPL
     let args: Vec<String> = std::env::args().collect();
     let play_mode: bool = args.iter().any(|a| a == "--play" || a == "-p");
     let interactive: bool = args.iter().any(|a| a == "--interactive" || a == "-i");
 
+    let display_mode = args
+        .windows(2)
+        .find(|w| w[0] == "--display" || w[0] == "-d")
+        .map(|w| {
+            display::parse_display_mode(&w[1]).unwrap_or_else(|| {
+                eprintln!("Unknown display mode: {}. Options: sprite, unicode, ascii", w[1]);
+                std::process::exit(1);
+            })
+        });
+
     if interactive {
-        repl::run();
+        repl::run(display_mode.unwrap_or(display::DisplayMode::Sprite));
         return;
     }
 

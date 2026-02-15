@@ -13,7 +13,7 @@ fn full_move_number(move_index: usize) -> usize {
     move_index / 2 + 1
 }
 
-fn render_board(board: &Board, strategy: &impl display::DisplayStrategy) {
+fn render_board(board: &Board, strategy: &dyn display::DisplayStrategy) {
     let mut writer = BufWriter::new(io::stdout());
     if let Err(err) = display::render(board, &mut writer, strategy) {
         eprintln!("  Display error: {err}");
@@ -24,21 +24,22 @@ fn render_board(board: &Board, strategy: &impl display::DisplayStrategy) {
     }
 }
 
-pub fn run() {
+pub fn run(initial_mode: display::DisplayMode) {
     let mut board = Board::new();
     let mut move_index: usize = 0;
 
     println!();
     println!("  ChessWAV Interactive Mode");
-    println!("  Type moves in algebraic notation. Commands: reset, quit");
+    println!("  Type moves in algebraic notation. Commands: display, reset, quit");
     println!();
 
     let color_mode = display::detect_color_mode();
-    let strategy = display::SpriteDisplay::new(color_mode);
+    let mut strategy: Box<dyn display::DisplayStrategy> =
+        display::create_strategy(initial_mode, color_mode);
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    render_board(&board, &strategy);
+    render_board(&board, &*strategy);
 
     loop {
         let side = if is_white_turn(move_index) {
@@ -68,7 +69,25 @@ pub fn run() {
                 board = Board::new();
                 move_index = 0;
                 println!("  Game reset.\n");
-                render_board(&board, &strategy);
+                render_board(&board, &*strategy);
+                continue;
+            }
+            "display" => {
+                println!("  Usage: display <mode>. Options: sprite, unicode, ascii\n");
+                continue;
+            }
+            _ if input.starts_with("display ") => {
+                let mode_str = &input["display ".len()..];
+                match display::parse_display_mode(mode_str) {
+                    Some(mode) => {
+                        strategy = display::create_strategy(mode, color_mode);
+                        println!("  Switched to {mode_str} display.\n");
+                        render_board(&board, &*strategy);
+                    }
+                    None => {
+                        println!("  Unknown display mode: {mode_str}. Options: sprite, unicode, ascii\n");
+                    }
+                }
                 continue;
             }
             _ => {}
@@ -102,7 +121,7 @@ pub fn run() {
         let wav = audio::to_wav(&samples);
         audio::play(&wav);
 
-        render_board(&board, &strategy);
+        render_board(&board, &*strategy);
         move_index += 1;
     }
 }

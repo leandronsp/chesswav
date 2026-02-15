@@ -28,10 +28,8 @@ pub use ascii::AsciiDisplay;
 pub use sprite::SpriteDisplay;
 pub use unicode::UnicodeDisplay;
 
-use std::fmt;
 use std::io::{self, Write};
 
-use ascii::piece_symbol;
 use crate::board::{Board, Color};
 use crate::chess::Piece;
 
@@ -84,6 +82,30 @@ pub trait DisplayStrategy {
     fn render_file_labels(&self, writer: &mut dyn Write) -> io::Result<()>;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DisplayMode {
+    Sprite,
+    Unicode,
+    Ascii,
+}
+
+pub fn parse_display_mode(value: &str) -> Option<DisplayMode> {
+    match value {
+        "sprite" => Some(DisplayMode::Sprite),
+        "unicode" => Some(DisplayMode::Unicode),
+        "ascii" => Some(DisplayMode::Ascii),
+        _ => None,
+    }
+}
+
+pub fn create_strategy(mode: DisplayMode, color_mode: ColorMode) -> Box<dyn DisplayStrategy> {
+    match mode {
+        DisplayMode::Sprite => Box::new(SpriteDisplay::new(color_mode)),
+        DisplayMode::Unicode => Box::new(UnicodeDisplay::new(color_mode)),
+        DisplayMode::Ascii => Box::new(AsciiDisplay),
+    }
+}
+
 pub fn color_mode_from_env(colorterm: &str) -> ColorMode {
     match colorterm {
         "truecolor" | "24bit" => ColorMode::TrueColor,
@@ -107,7 +129,7 @@ fn square_shade(file: u8, rank: u8) -> SquareShade {
 pub fn render(
     board: &Board,
     writer: &mut impl Write,
-    strategy: &impl DisplayStrategy,
+    strategy: &dyn DisplayStrategy,
 ) -> io::Result<()> {
     for rank in (0..BOARD_SIZE).rev() {
         for row in 0..strategy.square_height() {
@@ -123,24 +145,6 @@ pub fn render(
     strategy.render_file_labels(writer)
 }
 
-impl fmt::Display for Board {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for rank in (0..8).rev() {
-            write!(f, "  {} |", rank + 1)?;
-            for file in 0..8u8 {
-                let symbol = match self.get(file, rank as u8) {
-                    Some((piece, color)) => piece_symbol(piece, color),
-                    None => '.',
-                };
-                write!(f, " {symbol}")?;
-            }
-            writeln!(f)?;
-        }
-        writeln!(f, "    +----------------")?;
-        writeln!(f, "      a b c d e f g h")?;
-        Ok(())
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -167,12 +171,49 @@ mod tests {
     }
 
     #[test]
+    fn parse_display_mode_valid_values() {
+        assert_eq!(parse_display_mode("sprite"), Some(DisplayMode::Sprite));
+        assert_eq!(parse_display_mode("unicode"), Some(DisplayMode::Unicode));
+        assert_eq!(parse_display_mode("ascii"), Some(DisplayMode::Ascii));
+    }
+
+    #[test]
+    fn create_strategy_sprite_dimensions() {
+        let strategy = create_strategy(DisplayMode::Sprite, ColorMode::TrueColor);
+        assert_eq!(strategy.square_height(), 3);
+        assert_eq!(strategy.square_width(), 7);
+    }
+
+    #[test]
+    fn create_strategy_unicode_dimensions() {
+        let strategy = create_strategy(DisplayMode::Unicode, ColorMode::TrueColor);
+        assert_eq!(strategy.square_height(), 1);
+        assert_eq!(strategy.square_width(), 3);
+    }
+
+    #[test]
+    fn create_strategy_ascii_dimensions() {
+        let strategy = create_strategy(DisplayMode::Ascii, ColorMode::TrueColor);
+        assert_eq!(strategy.square_height(), 1);
+        assert_eq!(strategy.square_width(), 3);
+    }
+
+    #[test]
+    fn parse_display_mode_invalid_values() {
+        assert_eq!(parse_display_mode("foo"), None);
+        assert_eq!(parse_display_mode(""), None);
+        assert_eq!(parse_display_mode("SPRITE"), None);
+    }
+
+    #[test]
     fn display_initial_position() {
         let board = Board::new();
-        let display = format!("{board}");
-        assert!(display.contains("r n b q k b n r"));
-        assert!(display.contains("P P P P P P P P"));
-        assert!(display.contains("a b c d e f g h"));
+        let mut buf = Vec::new();
+        render(&board, &mut buf, &AsciiDisplay).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains(" r "), "should contain black rook");
+        assert!(output.contains(" P "), "should contain white pawn");
+        assert!(output.contains('a'), "should contain file labels");
     }
 
     #[test]
