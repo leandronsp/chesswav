@@ -1,11 +1,14 @@
 //! Board display formatting.
 //!
-//! Provides text rendering of the board state for the REPL and debug output.
+//! Provides colored and plain-text rendering of the board state.
 //!
-//! ## Exported functions
+//! ## Exported items
 //!
-//! - `piece_symbol` — maps a piece and color to its display character (uppercase = white, lowercase = black)
-//! - `Board::fmt` — renders the board as an 8x8 grid with rank/file labels
+//! - `render` — writes an ANSI-colored board with sprite pieces to any `impl Write`
+//! - `ColorMode` — selects truecolor or 256-color output
+//! - `detect_color_mode` — reads `COLORTERM` env to pick the best mode
+//! - `piece_symbol` — maps a piece and color to its ASCII character (uppercase = white, lowercase = black)
+//! - `Board::fmt` — plain ASCII board for debug output
 
 use std::fmt;
 use std::io::{self, Write};

@@ -67,6 +67,7 @@ pub fn run() {
                 board = Board::new();
                 move_index = 0;
                 println!("  Game reset.\n");
+                render_board(&board, color_mode);
                 continue;
             }
             _ => {}
