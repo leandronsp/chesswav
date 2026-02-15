@@ -98,6 +98,10 @@ pub fn parse_display_mode(value: &str) -> Option<DisplayMode> {
     }
 }
 
+/// Returns a heap-allocated strategy chosen at runtime.
+/// `dyn DisplayStrategy` enables dynamic dispatch — the concrete type
+/// (Sprite, Unicode, or Ascii) is resolved through a vtable at runtime,
+/// which lets the REPL swap strategies via the `display` command.
 pub fn create_strategy(mode: DisplayMode, color_mode: ColorMode) -> Box<dyn DisplayStrategy> {
     match mode {
         DisplayMode::Sprite => Box::new(SpriteDisplay::new(color_mode)),
@@ -126,6 +130,8 @@ fn square_shade(file: u8, rank: u8) -> SquareShade {
     }
 }
 
+/// `&dyn DisplayStrategy` accepts any strategy behind a trait object,
+/// matching the `Box<dyn DisplayStrategy>` the REPL holds.
 pub fn render(
     board: &Board,
     writer: &mut impl Write,

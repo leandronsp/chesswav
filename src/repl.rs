@@ -34,6 +34,8 @@ pub fn run(initial_mode: display::DisplayMode) {
     println!();
 
     let color_mode = display::detect_color_mode();
+    // Box<dyn ...> stores the strategy on the heap behind a vtable pointer,
+    // allowing reassignment to a different concrete type at runtime.
     let mut strategy: Box<dyn display::DisplayStrategy> =
         display::create_strategy(initial_mode, color_mode);
     let stdin = io::stdin();
