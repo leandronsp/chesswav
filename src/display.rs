@@ -21,6 +21,12 @@ pub enum ColorMode {
     Color256,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum SquareShade {
+    Light,
+    Dark,
+}
+
 pub fn color_mode_from_env(colorterm: &str) -> ColorMode {
     match colorterm {
         "truecolor" | "24bit" => ColorMode::TrueColor,
@@ -37,16 +43,19 @@ fn piece_foreground(color: Color, mode: ColorMode) -> &'static str {
     }
 }
 
-fn square_background(light: bool, mode: ColorMode) -> &'static str {
-    match (light, mode) {
-        (true, ColorMode::TrueColor) => "\x1b[48;2;235;236;208m",
-        (false, ColorMode::TrueColor) => "\x1b[48;2;119;149;86m",
-        (true, ColorMode::Color256) => "\x1b[48;5;187m",
-        (false, ColorMode::Color256) => "\x1b[48;5;65m",
+fn square_background(shade: SquareShade, mode: ColorMode) -> &'static str {
+    match (shade, mode) {
+        (SquareShade::Light, ColorMode::TrueColor) => "\x1b[48;2;235;236;208m",
+        (SquareShade::Dark, ColorMode::TrueColor) => "\x1b[48;2;119;149;86m",
+        (SquareShade::Light, ColorMode::Color256) => "\x1b[48;5;187m",
+        (SquareShade::Dark, ColorMode::Color256) => "\x1b[48;5;65m",
     }
 }
 
 type Sprite = [&'static str; 3];
+
+const SPRITE_HEIGHT: usize = 3;
+const BOARD_SIZE: u8 = 8;
 
 const KING_SPRITE: Sprite = ["   █   ", "  ▀█▀  ", "  ▀▀▀  "];
 const QUEEN_SPRITE: Sprite = ["  ▄ ▄  ", "  ▀█▀  ", "  ▀▀▀  "];
@@ -66,8 +75,12 @@ fn sprite_for(piece: Piece) -> Sprite {
     }
 }
 
-fn is_light_square(file: u8, rank: u8) -> bool {
-    (file + rank) % 2 != 0
+fn square_shade(file: u8, rank: u8) -> SquareShade {
+    if (file + rank) % 2 != 0 {
+        SquareShade::Light
+    } else {
+        SquareShade::Dark
+    }
 }
 
 const EMPTY_SQUARE: &str = "       ";
@@ -75,11 +88,11 @@ const EMPTY_SQUARE: &str = "       ";
 fn render_square_row(
     writer: &mut impl Write,
     square: Option<(Piece, Color)>,
-    light: bool,
+    shade: SquareShade,
     mode: ColorMode,
     row: usize,
 ) -> io::Result<()> {
-    let bg = square_background(light, mode);
+    let bg = square_background(shade, mode);
     match square {
         None => write!(writer, "{bg}{EMPTY_SQUARE}{RESET}"),
         Some((piece, color)) => {
@@ -104,16 +117,16 @@ fn render_rank(
     mode: ColorMode,
 ) -> io::Result<()> {
     let label_fg = label_foreground(mode);
-    for sprite_row in 0..3usize {
+    for sprite_row in 0..SPRITE_HEIGHT {
         if sprite_row == 1 {
             write!(writer, "{label_fg} {} {RESET}", rank + 1)?;
         } else {
             write!(writer, "   ")?;
         }
-        for file in 0..8u8 {
-            let light = is_light_square(file, rank);
+        for file in 0..BOARD_SIZE {
+            let shade = square_shade(file, rank);
             let square = board.get(file, rank);
-            render_square_row(writer, square, light, mode, sprite_row)?;
+            render_square_row(writer, square, shade, mode, sprite_row)?;
         }
         writeln!(writer)?;
     }
@@ -137,13 +150,14 @@ pub fn detect_color_mode() -> ColorMode {
 }
 
 pub fn render(board: &Board, writer: &mut impl Write, mode: ColorMode) -> io::Result<()> {
-    for rank in (0..8u8).rev() {
+    for rank in (0..BOARD_SIZE).rev() {
         render_rank(writer, board, rank, mode)?;
     }
     render_file_labels(writer, mode)
 }
 
-pub fn unicode_symbol(piece: Piece, color: Color) -> char {
+#[cfg(test)]
+fn unicode_symbol(piece: Piece, color: Color) -> char {
     match (piece, color) {
         (Piece::King, Color::White) => '♔',
         (Piece::Queen, Color::White) => '♕',
@@ -285,7 +299,7 @@ mod tests {
     #[test]
     fn render_square_row_empty() {
         let mut buf = Vec::new();
-        render_square_row(&mut buf, None, true, ColorMode::TrueColor, 0).unwrap();
+        render_square_row(&mut buf, None, SquareShade::Light, ColorMode::TrueColor, 0).unwrap();
         let output = String::from_utf8(buf).unwrap();
         assert_eq!(
             output,
@@ -299,7 +313,7 @@ mod tests {
         render_square_row(
             &mut buf,
             Some((Piece::Rook, Color::White)),
-            false,
+            SquareShade::Dark,
             ColorMode::TrueColor,
             1,
         )
@@ -385,26 +399,26 @@ mod tests {
 
     #[test]
     fn square_background_truecolor() {
-        let light = square_background(true, ColorMode::TrueColor);
+        let light = square_background(SquareShade::Light, ColorMode::TrueColor);
         assert_eq!(light, "\x1b[48;2;235;236;208m");
-        let dark = square_background(false, ColorMode::TrueColor);
+        let dark = square_background(SquareShade::Dark, ColorMode::TrueColor);
         assert_eq!(dark, "\x1b[48;2;119;149;86m");
     }
 
     #[test]
     fn square_background_256() {
-        let light = square_background(true, ColorMode::Color256);
+        let light = square_background(SquareShade::Light, ColorMode::Color256);
         assert_eq!(light, "\x1b[48;5;187m");
-        let dark = square_background(false, ColorMode::Color256);
+        let dark = square_background(SquareShade::Dark, ColorMode::Color256);
         assert_eq!(dark, "\x1b[48;5;65m");
     }
 
     #[test]
-    fn is_light_square_corners() {
-        assert!(!is_light_square(0, 0)); // a1 = dark
-        assert!(is_light_square(1, 0)); // b1 = light
-        assert!(!is_light_square(7, 7)); // h8 = dark
-        assert!(is_light_square(0, 1)); // a2 = light
+    fn square_shade_corners() {
+        assert_eq!(square_shade(0, 0), SquareShade::Dark); // a1
+        assert_eq!(square_shade(1, 0), SquareShade::Light); // b1
+        assert_eq!(square_shade(7, 7), SquareShade::Dark); // h8
+        assert_eq!(square_shade(0, 1), SquareShade::Light); // a2
     }
 
     #[test]

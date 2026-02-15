@@ -13,6 +13,17 @@ fn full_move_number(move_index: usize) -> usize {
     move_index / 2 + 1
 }
 
+fn render_board(board: &Board, color_mode: display::ColorMode) {
+    let mut writer = BufWriter::new(io::stdout());
+    if let Err(err) = display::render(board, &mut writer, color_mode) {
+        eprintln!("  Display error: {err}");
+        return;
+    }
+    if let Err(err) = writer.flush() {
+        eprintln!("  Display error: {err}");
+    }
+}
+
 pub fn run() {
     let mut board = Board::new();
     let mut move_index: usize = 0;
@@ -26,9 +37,7 @@ pub fn run() {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    let mut buf_writer = BufWriter::new(io::stdout());
-    let _ = display::render(&board, &mut buf_writer, color_mode);
-    drop(buf_writer);
+    render_board(&board, color_mode);
 
     loop {
         let side = if is_white_turn(move_index) {
@@ -91,8 +100,7 @@ pub fn run() {
         let wav = audio::to_wav(&samples);
         audio::play(&wav);
 
-        let mut buf_writer = BufWriter::new(io::stdout());
-        let _ = display::render(&board, &mut buf_writer, color_mode);
+        render_board(&board, color_mode);
         move_index += 1;
     }
 }
