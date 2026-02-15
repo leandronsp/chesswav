@@ -1,8 +1,9 @@
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, BufWriter, Write};
 
 use crate::audio;
 use crate::board::{Board, Color};
 use crate::chess::NotationMove;
+use crate::display;
 
 fn is_white_turn(move_index: usize) -> bool {
     move_index % 2 == 0
@@ -21,8 +22,13 @@ pub fn run() {
     println!("  Type moves in algebraic notation. Commands: reset, quit");
     println!();
 
+    let color_mode = display::detect_color_mode();
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+
+    let mut buf_writer = BufWriter::new(io::stdout());
+    let _ = display::render(&board, &mut buf_writer, color_mode);
+    drop(buf_writer);
 
     loop {
         let side = if is_white_turn(move_index) {
@@ -85,7 +91,8 @@ pub fn run() {
         let wav = audio::to_wav(&samples);
         audio::play(&wav);
 
-        println!("{board}");
+        let mut buf_writer = BufWriter::new(io::stdout());
+        let _ = display::render(&board, &mut buf_writer, color_mode);
         move_index += 1;
     }
 }
