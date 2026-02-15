@@ -2,7 +2,7 @@ use std::io::{self, BufRead, BufWriter, Write};
 
 use crate::audio;
 use crate::engine::board::{Board, Color};
-use crate::engine::chess::NotationMove;
+use crate::engine::chess::{NotationMove, Threat};
 use super::display;
 
 fn is_white_turn(move_index: usize) -> bool {
@@ -11,6 +11,52 @@ fn is_white_turn(move_index: usize) -> bool {
 
 fn full_move_number(move_index: usize) -> usize {
     move_index / 2 + 1
+}
+
+#[derive(Debug, PartialEq)]
+enum PostGameAction {
+    NewGame,
+    Quit,
+}
+
+/// Returns a message based on precomputed check/checkmate state.
+fn format_threat_message(in_check: bool, is_checkmate: bool, opponent_color: Color) -> Option<String> {
+    if is_checkmate {
+        let winner = match opponent_color {
+            Color::White => "Black",
+            Color::Black => "White",
+        };
+        Some(format!("  Checkmate! {winner} wins!"))
+    } else if in_check {
+        Some("  Check!".to_string())
+    } else {
+        None
+    }
+}
+
+fn parse_post_game_choice(input: &str) -> Option<PostGameAction> {
+    match input {
+        "new" | "reset" => Some(PostGameAction::NewGame),
+        "quit" => Some(PostGameAction::Quit),
+        _ => None,
+    }
+}
+
+/// Validates notation threat annotation against precomputed board state.
+/// Returns a warning message on mismatch.
+fn validate_threat(notation_threat: Threat, in_check: bool, is_checkmate: bool) -> Option<String> {
+    match notation_threat {
+        Threat::Checkmate if !is_checkmate => {
+            Some("  Warning: move annotated as checkmate but board disagrees".to_string())
+        }
+        Threat::Check if !in_check => {
+            Some("  Warning: move annotated as check but board disagrees".to_string())
+        }
+        Threat::None if in_check || is_checkmate => {
+            Some("  Warning: check/checkmate detected but not annotated in notation".to_string())
+        }
+        _ => None,
+    }
 }
 
 enum RenderMode {
@@ -47,6 +93,7 @@ pub fn run(initial_mode: display::DisplayMode) {
         display::create_strategy(initial_mode, color_mode);
     let stdin = io::stdin();
     let mut stdout = BufWriter::new(io::stdout());
+    let mut extra_lines: usize = 0;
 
     if let Err(err) = render_board(&board, &mut stdout, &*strategy, &move_history, RenderMode::Initial) {
         eprintln!("  Display error: {err}");
@@ -74,7 +121,8 @@ pub fn run(initial_mode: display::DisplayMode) {
             continue;
         }
 
-        let redraw_height = display::layout_height(&*strategy) + 1;
+        let redraw_height = display::layout_height(&*strategy) + 1 + extra_lines;
+        extra_lines = 0;
 
         match input {
             "quit" => break,
@@ -168,6 +216,69 @@ pub fn run(initial_mode: display::DisplayMode) {
         ) {
             eprintln!("  Display error: {err}");
         }
+
+        let opponent_color = color.opponent();
+        let in_check = board.is_in_check(opponent_color);
+        let checkmate = in_check && board.is_checkmate(opponent_color);
+
+        if let Some(warning) = validate_threat(chess_move.threat, in_check, checkmate) {
+            writeln!(stdout, "{warning}").ok();
+            stdout.flush().ok();
+            extra_lines += 1;
+        }
+
+        if let Some(message) = format_threat_message(in_check, checkmate, opponent_color) {
+            writeln!(stdout, "{message}").ok();
+            stdout.flush().ok();
+            extra_lines += 1;
+
+            if checkmate {
+                writeln!(stdout, "  New game (new) or quit? >").ok();
+                stdout.flush().ok();
+                // prompt line
+                extra_lines += 1;
+
+                loop {
+                    let mut post_line = String::new();
+                    match stdin.lock().read_line(&mut post_line) {
+                        Ok(0) => return,
+                        Err(_) => return,
+                        _ => {}
+                    }
+                    // user input line
+                    extra_lines += 1;
+                    match parse_post_game_choice(post_line.trim()) {
+                        Some(PostGameAction::NewGame) => {
+                            board = Board::new();
+                            move_index = 0;
+                            move_history.clear();
+                            let height = display::layout_height(&*strategy)
+                                + 1
+                                + extra_lines;
+                            extra_lines = 0;
+                            if let Err(err) = render_board(
+                                &board,
+                                &mut stdout,
+                                &*strategy,
+                                &move_history,
+                                RenderMode::Redraw(height),
+                            ) {
+                                eprintln!("  Display error: {err}");
+                            }
+                            break;
+                        }
+                        Some(PostGameAction::Quit) => return,
+                        None => {
+                            writeln!(stdout, "  Please type 'new' or 'quit'").ok();
+                            stdout.flush().ok();
+                            extra_lines += 1;
+                        }
+                    }
+                }
+                continue;
+            }
+        }
+
         move_index += 1;
     }
 }
@@ -178,6 +289,62 @@ mod tests {
     use crate::tui::display::AsciiDisplay;
 
     const NO_MOVES: &[&str] = &[];
+
+    #[test]
+    fn format_threat_no_check() {
+        let message = format_threat_message(false, false, Color::Black);
+        assert_eq!(message, None);
+    }
+
+    #[test]
+    fn format_threat_check_when_in_check() {
+        let message = format_threat_message(true, false, Color::Black);
+        assert_eq!(message, Some("  Check!".to_string()));
+    }
+
+    #[test]
+    fn format_threat_checkmate_message() {
+        let message = format_threat_message(true, true, Color::White);
+        assert_eq!(message, Some("  Checkmate! Black wins!".to_string()));
+    }
+
+    #[test]
+    fn parse_post_game_new() {
+        assert_eq!(parse_post_game_choice("new"), Some(PostGameAction::NewGame));
+    }
+
+    #[test]
+    fn parse_post_game_reset() {
+        assert_eq!(parse_post_game_choice("reset"), Some(PostGameAction::NewGame));
+    }
+
+    #[test]
+    fn parse_post_game_quit() {
+        assert_eq!(parse_post_game_choice("quit"), Some(PostGameAction::Quit));
+    }
+
+    #[test]
+    fn parse_post_game_invalid() {
+        assert_eq!(parse_post_game_choice("blah"), None);
+    }
+
+    #[test]
+    fn validate_threat_checkmate_annotation_but_not_actual() {
+        let warning = validate_threat(Threat::Checkmate, false, false);
+        assert!(warning.is_some());
+    }
+
+    #[test]
+    fn validate_threat_check_annotation_confirmed() {
+        let warning = validate_threat(Threat::Check, true, false);
+        assert!(warning.is_none());
+    }
+
+    #[test]
+    fn validate_threat_missing_check_annotation() {
+        let warning = validate_threat(Threat::None, true, false);
+        assert!(warning.is_some());
+    }
 
     #[test]
     fn render_board_with_moves_writes_sidebar() {
