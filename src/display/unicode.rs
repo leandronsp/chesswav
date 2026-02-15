@@ -3,10 +3,8 @@ use std::io::{self, Write};
 use crate::board::Color;
 use crate::chess::Piece;
 
-use super::{
-    label_foreground, piece_foreground, square_background, ColorMode, DisplayStrategy, SquareShade,
-    FILE_LABELS, RESET,
-};
+use super::colors::{label_foreground, piece_foreground, square_background, RESET};
+use super::{ColorMode, DisplayStrategy, SquareShade, FILE_LABELS};
 
 const UNICODE_EMPTY: &str = "   ";
 

@@ -3,10 +3,8 @@ use std::io::{self, Write};
 use crate::board::Color;
 use crate::chess::Piece;
 
-use super::{
-    label_foreground, piece_foreground, square_background, ColorMode, DisplayStrategy, SquareShade,
-    FILE_LABELS, RESET,
-};
+use super::colors::{label_foreground, piece_foreground, square_background, RESET};
+use super::{ColorMode, DisplayStrategy, SquareShade, FILE_LABELS};
 
 /// A sprite is 3 rows of 7-character strings using half-block characters
 /// (▄ ▀ █). Each character cell is 1 wide × 2 tall in the terminal, so

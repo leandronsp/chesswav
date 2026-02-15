@@ -20,6 +20,7 @@
 //! accept a `ColorMode`; [`AsciiDisplay`] ignores colors entirely.
 
 mod ascii;
+mod colors;
 mod sprite;
 mod unicode;
 
@@ -30,10 +31,10 @@ pub use unicode::UnicodeDisplay;
 use std::fmt;
 use std::io::{self, Write};
 
+use ascii::piece_symbol;
 use crate::board::{Board, Color};
 use crate::chess::Piece;
 
-const RESET: &str = "\x1b[0m";
 const BOARD_SIZE: u8 = 8;
 const FILE_LABELS: [char; 8] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -95,54 +96,11 @@ pub fn detect_color_mode() -> ColorMode {
     color_mode_from_env(&colorterm)
 }
 
-/// ANSI foreground escape for piece color (white=#FFF, black=#000).
-fn piece_foreground(color: Color, mode: ColorMode) -> &'static str {
-    match (color, mode) {
-        (Color::White, ColorMode::TrueColor) => "\x1b[38;2;255;255;255m",
-        (Color::Black, ColorMode::TrueColor) => "\x1b[38;2;0;0;0m",
-        (Color::White, ColorMode::Color256) => "\x1b[38;5;231m",
-        (Color::Black, ColorMode::Color256) => "\x1b[38;5;16m",
-    }
-}
-
-/// ANSI background escape for square shade (light=#EBECD0, dark=#779556).
-fn square_background(shade: SquareShade, mode: ColorMode) -> &'static str {
-    match (shade, mode) {
-        (SquareShade::Light, ColorMode::TrueColor) => "\x1b[48;2;235;236;208m",
-        (SquareShade::Dark, ColorMode::TrueColor) => "\x1b[48;2;119;149;86m",
-        (SquareShade::Light, ColorMode::Color256) => "\x1b[48;5;187m",
-        (SquareShade::Dark, ColorMode::Color256) => "\x1b[48;5;65m",
-    }
-}
-
-/// ANSI foreground escape for rank/file labels (muted gray).
-fn label_foreground(mode: ColorMode) -> &'static str {
-    match mode {
-        ColorMode::TrueColor => "\x1b[38;2;150;150;150m",
-        ColorMode::Color256 => "\x1b[38;5;248m",
-    }
-}
-
 fn square_shade(file: u8, rank: u8) -> SquareShade {
     if (file + rank) % 2 != 0 {
         SquareShade::Light
     } else {
         SquareShade::Dark
-    }
-}
-
-pub fn piece_symbol(piece: Piece, color: Color) -> char {
-    let symbol = match piece {
-        Piece::Pawn => 'P',
-        Piece::Knight => 'N',
-        Piece::Bishop => 'B',
-        Piece::Rook => 'R',
-        Piece::Queen => 'Q',
-        Piece::King => 'K',
-    };
-    match color {
-        Color::White => symbol,
-        Color::Black => symbol.to_ascii_lowercase(),
     }
 }
 
@@ -187,66 +145,6 @@ impl fmt::Display for Board {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn white_pawn_symbol() {
-        assert_eq!(piece_symbol(Piece::Pawn, Color::White), 'P');
-    }
-
-    #[test]
-    fn black_pawn_symbol() {
-        assert_eq!(piece_symbol(Piece::Pawn, Color::Black), 'p');
-    }
-
-    #[test]
-    fn white_knight_symbol() {
-        assert_eq!(piece_symbol(Piece::Knight, Color::White), 'N');
-    }
-
-    #[test]
-    fn black_queen_symbol() {
-        assert_eq!(piece_symbol(Piece::Queen, Color::Black), 'q');
-    }
-
-    #[test]
-    fn piece_foreground_truecolor() {
-        assert_eq!(
-            piece_foreground(Color::White, ColorMode::TrueColor),
-            "\x1b[38;2;255;255;255m"
-        );
-        assert_eq!(
-            piece_foreground(Color::Black, ColorMode::TrueColor),
-            "\x1b[38;2;0;0;0m"
-        );
-    }
-
-    #[test]
-    fn piece_foreground_256() {
-        assert_eq!(
-            piece_foreground(Color::White, ColorMode::Color256),
-            "\x1b[38;5;231m"
-        );
-        assert_eq!(
-            piece_foreground(Color::Black, ColorMode::Color256),
-            "\x1b[38;5;16m"
-        );
-    }
-
-    #[test]
-    fn square_background_truecolor() {
-        let light = square_background(SquareShade::Light, ColorMode::TrueColor);
-        assert_eq!(light, "\x1b[48;2;235;236;208m");
-        let dark = square_background(SquareShade::Dark, ColorMode::TrueColor);
-        assert_eq!(dark, "\x1b[48;2;119;149;86m");
-    }
-
-    #[test]
-    fn square_background_256() {
-        let light = square_background(SquareShade::Light, ColorMode::Color256);
-        assert_eq!(light, "\x1b[48;5;187m");
-        let dark = square_background(SquareShade::Dark, ColorMode::Color256);
-        assert_eq!(dark, "\x1b[48;5;65m");
-    }
 
     #[test]
     fn square_shade_corners() {

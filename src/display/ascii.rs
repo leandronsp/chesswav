@@ -3,7 +3,22 @@ use std::io::{self, Write};
 use crate::board::Color;
 use crate::chess::Piece;
 
-use super::{piece_symbol, DisplayStrategy, SquareShade, FILE_LABELS};
+use super::{DisplayStrategy, SquareShade, FILE_LABELS};
+
+pub fn piece_symbol(piece: Piece, color: Color) -> char {
+    let symbol = match piece {
+        Piece::Pawn => 'P',
+        Piece::Knight => 'N',
+        Piece::Bishop => 'B',
+        Piece::Rook => 'R',
+        Piece::Queen => 'Q',
+        Piece::King => 'K',
+    };
+    match color {
+        Color::White => symbol,
+        Color::Black => symbol.to_ascii_lowercase(),
+    }
+}
 
 /// Plain ASCII display — no colors, no Unicode.
 ///
@@ -91,5 +106,25 @@ mod tests {
             .unwrap();
         let output = String::from_utf8(buf).unwrap();
         assert_eq!(output, " K ");
+    }
+
+    #[test]
+    fn white_pawn_symbol() {
+        assert_eq!(piece_symbol(Piece::Pawn, Color::White), 'P');
+    }
+
+    #[test]
+    fn black_pawn_symbol() {
+        assert_eq!(piece_symbol(Piece::Pawn, Color::Black), 'p');
+    }
+
+    #[test]
+    fn white_knight_symbol() {
+        assert_eq!(piece_symbol(Piece::Knight, Color::White), 'N');
+    }
+
+    #[test]
+    fn black_queen_symbol() {
+        assert_eq!(piece_symbol(Piece::Queen, Color::Black), 'q');
     }
 }
