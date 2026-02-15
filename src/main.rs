@@ -14,6 +14,10 @@
 //! cargo run --release -- --interactive
 //! cargo run --release -- -i
 //!
+//! # Interactive with display mode (sprite, unicode, ascii)
+//! cargo run --release -- --interactive --display sprite
+//! cargo run --release -- -i -d unicode
+//!
 //! # From a file
 //! cargo run --release < moves.txt > game.wav
 //!
@@ -21,6 +25,7 @@
 //! echo "e4 e5 Nf3 Nc6" | chesswav > game.wav
 //! echo "e4 e5 Nf3 Nc6" | chesswav --play
 //! chesswav --interactive
+//! chesswav --interactive --display ascii
 //! ```
 
 use std::io::{self, Read, Write};

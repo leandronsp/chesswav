@@ -22,8 +22,10 @@ If the review finds nothing actionable, skip the plan and report the verdict.
 
 ### 0. Documentation
 - Does `README.md` reflect the current project structure, features, and usage?
-- If the changes add/remove/rename modules, files, CLI flags, or features, the README **must** be updated
-- Check the "Project Structure" section against actual `src/` layout
+- Does `CLAUDE.md` "File Structure" and module list match the actual codebase?
+- Are `//!` doc comments in `main.rs` and `lib.rs` up to date with CLI flags and usage?
+- Are `///` doc comments on changed public types/functions accurate?
+- If the changes add/remove/rename modules, files, CLI flags, or features, **all affected docs must be updated**
 
 ### 1. Correctness
 - Does the math work? (frequencies, waveforms, byte calculations)
@@ -103,8 +105,10 @@ A) **Issue**: description
 
 ### Documentation
 - [ ] `README.md` "Project Structure" matches actual `src/` layout
+- [ ] `CLAUDE.md` "File Structure" matches actual `src/` layout
+- [ ] `main.rs` doc comment reflects all CLI flags and usage
 - [ ] New features/flags documented in README
-- [ ] Removed features/flags cleaned from README
+- [ ] Removed features/flags cleaned from README and doc comments
 
 ### Rust
 - [ ] No `unwrap()` in production code

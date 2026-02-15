@@ -56,7 +56,7 @@ Ranks 1-8 map to octaves (lower to higher).
 ## Code Standards
 
 - No external dependencies (pure Rust stdlib)
-- Modules per domain: `wav`, `synth`, `freq`, `notation`, `board`
+- Modules per bounded context: `engine/`, `audio/`, `tui/`
 - Unit tests in each module with `#[cfg(test)]`
 - Self-documenting function names
 - `cargo clippy` must pass with no warnings
@@ -157,6 +157,16 @@ Comments explain *why*, not *what*. Not zero comments — contextual comments ar
 
 Do not over-comment obvious code. Do not strip all comments either.
 
+### Documentation Hygiene
+
+When making changes, **update all affected documentation**:
+- `README.md` — project structure, features, usage, CLI flags
+- `CLAUDE.md` — file structure, module list, conventions
+- `//!` doc comments in `main.rs` and `lib.rs` — usage examples, module overview
+- Inline `///` doc comments on public types and functions that changed behavior
+
+Documentation must stay in sync with the code. Stale docs are worse than no docs.
+
 ## Rust Best Practices
 
 ### Idiomatic Patterns
@@ -203,15 +213,31 @@ Run tests: `cargo test`
 ```
 ├── Cargo.toml
 ├── src/
-│   ├── lib.rs         # Library exports
-│   ├── main.rs        # CLI entry point
-│   ├── wav.rs         # WAV format output
-│   ├── synth.rs       # Waveform generators
-│   ├── freq.rs        # Frequency mapping
-│   ├── notation.rs    # Algebraic notation parser
-│   └── board.rs       # Board representation
+│   ├── lib.rs               # Library exports
+│   ├── main.rs              # CLI entry point
+│   ├── engine/
+│   │   ├── mod.rs           # Engine module exports
+│   │   ├── chess.rs         # Domain types (Piece, Square, Move, parser)
+│   │   ├── board.rs         # Board representation & move execution
+│   │   └── hint.rs          # Move disambiguation hints
+│   ├── audio/
+│   │   ├── mod.rs           # Audio module exports
+│   │   ├── freq.rs          # Square to frequency mapping
+│   │   ├── synth.rs         # Note synthesis & orchestration
+│   │   ├── wav.rs           # WAV file encoder
+│   │   ├── waveform.rs      # Waveform generators (sine, triangle, square, saw)
+│   │   └── blend.rs         # Waveform blending for composite timbres
+│   └── tui/
+│       ├── mod.rs           # TUI module exports
+│       ├── repl.rs          # Interactive REPL
+│       └── display/
+│           ├── mod.rs       # Display mode abstraction
+│           ├── sprite.rs    # Half-block pixel art renderer
+│           ├── unicode.rs   # Unicode chess symbol renderer
+│           ├── ascii.rs     # Plain text renderer
+│           └── colors.rs    # ANSI color support (truecolor/256)
 ├── tests/
-│   └── integration.rs # End-to-end tests
+│   └── integration.rs       # End-to-end tests
 ├── CLAUDE.md
 └── ROADMAP.md
 ```
