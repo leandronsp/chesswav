@@ -1,9 +1,9 @@
 use std::io::{self, BufRead, BufWriter, Write};
 
 use crate::audio;
-use crate::board::{Board, Color};
-use crate::chess::NotationMove;
-use crate::display;
+use crate::engine::board::{Board, Color};
+use crate::engine::chess::NotationMove;
+use super::display;
 
 fn is_white_turn(move_index: usize) -> bool {
     move_index % 2 == 0
@@ -175,7 +175,7 @@ pub fn run(initial_mode: display::DisplayMode) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::display::AsciiDisplay;
+    use crate::tui::display::AsciiDisplay;
 
     const NO_MOVES: &[&str] = &[];
 

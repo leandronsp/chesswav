@@ -26,7 +26,7 @@
 //!
 //! Frequency formula: f = 440 × 2^(semitones_from_A4 / 12)
 
-use crate::chess::Square;
+use crate::engine::chess::Square;
 
 /// A4 = 440 Hz is the international tuning standard.
 const A4_FREQ: f64 = 440.0;

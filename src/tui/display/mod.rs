@@ -30,8 +30,8 @@ pub use unicode::UnicodeDisplay;
 
 use std::io::{self, Write};
 
-use crate::board::{Board, Color};
-use crate::chess::Piece;
+use crate::engine::board::{Board, Color};
+use crate::engine::chess::Piece;
 
 const BOARD_SIZE: u8 = 8;
 const FILE_LABELS: [char; 8] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];

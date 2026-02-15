@@ -1,5 +1,5 @@
-use crate::chess::{NotationMove, Piece, ResolvedMove, Square};
-use crate::hint::{extract_hints, is_castling, resolve_castling, strip_annotations};
+use super::chess::{NotationMove, Piece, ResolvedMove, Square};
+use super::hint::{extract_hints, is_castling, resolve_castling, strip_annotations};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Color {

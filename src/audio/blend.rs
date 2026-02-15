@@ -36,7 +36,7 @@
 //! Both options can be combined: band-limit first, then blend with sine.
 //! This produces warm, musical timbres without digital harshness.
 
-use crate::waveform::Waveform;
+use super::waveform::Waveform;
 
 /// Options for blending and filtering waveforms.
 #[derive(Clone, Copy)]
@@ -67,6 +67,7 @@ impl Blend {
 
     /// Band-limit only (no sine mixing).
     /// `harmonics`: number of Fourier terms (higher = closer to raw)
+    #[allow(dead_code)]
     pub fn band_limited(harmonics: u32) -> Self {
         Self {
             sine_mix: 0.0,

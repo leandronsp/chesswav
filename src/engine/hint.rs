@@ -16,8 +16,8 @@
 //! - `strip_annotations` — removes check/capture/annotation symbols from notation
 //! - `extract_hints` — extracts file/rank disambiguation hints from cleaned notation
 
-use crate::board::Color;
-use crate::chess::{NotationMove, Piece, ResolvedMove, Square};
+use super::board::Color;
+use super::chess::{NotationMove, Piece, ResolvedMove, Square};
 
 pub fn is_castling(notation: &str) -> bool {
     let clean: String = notation
@@ -95,7 +95,7 @@ fn extract_pawn_hints(clean: &str) -> (Option<u8>, Option<u8>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::chess::{Capture, Threat};
+    use crate::engine::chess::{Capture, Threat};
 
     #[test]
     fn kingside_castling_detected() {

@@ -1,11 +1,3 @@
 pub mod audio;
-pub mod blend;
-pub mod board;
-pub mod chess;
-pub mod display;
-pub mod freq;
-pub mod hint;
-pub mod repl;
-pub mod synth;
-pub mod wav;
-pub mod waveform;
+pub mod engine;
+pub mod tui;

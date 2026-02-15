@@ -2,9 +2,9 @@
 
 use std::f64::consts::PI;
 
-use crate::audio::{MS_PER_SECOND, SAMPLE_RATE};
-use crate::blend::Blend;
-use crate::waveform::{Composite, Harmonics, Sawtooth, Sine, Square, Triangle, Waveform};
+use super::{MS_PER_SECOND, SAMPLE_RATE};
+use super::blend::Blend;
+use super::waveform::{Composite, Harmonics, Sawtooth, Sine, Square, Triangle, Waveform};
 
 const AMPLITUDE: f64 = i16::MAX as f64;
 
