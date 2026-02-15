@@ -62,6 +62,22 @@ chesswav < moves.txt > output.wav
 echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav > game.wav
 ```
 
+## Display
+
+Interactive mode renders the board using half-block sprite pixel art with ANSI colors. The color depth is auto-detected from the `COLORTERM` environment variable:
+
+| `COLORTERM` value | Color mode |
+|-------------------|------------|
+| `truecolor` | 24-bit RGB |
+| `24bit` | 24-bit RGB |
+| *(anything else)* | 256-color xterm palette |
+
+Most modern terminals (iTerm2, Ghostty, WezTerm, Windows Terminal, GNOME Terminal) set `COLORTERM=truecolor` automatically. If colors look wrong, you can override it:
+
+```bash
+COLORTERM=truecolor chesswav --interactive
+```
+
 ## How it works
 
 - Columns (a-h) map to notes (C, D, E, F, G, A, B, C)

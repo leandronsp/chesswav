@@ -13,9 +13,9 @@ fn full_move_number(move_index: usize) -> usize {
     move_index / 2 + 1
 }
 
-fn render_board(board: &Board, color_mode: display::ColorMode) {
+fn render_board(board: &Board, strategy: &impl display::DisplayStrategy) {
     let mut writer = BufWriter::new(io::stdout());
-    if let Err(err) = display::render(board, &mut writer, color_mode) {
+    if let Err(err) = display::render(board, &mut writer, strategy) {
         eprintln!("  Display error: {err}");
         return;
     }
@@ -34,10 +34,11 @@ pub fn run() {
     println!();
 
     let color_mode = display::detect_color_mode();
+    let strategy = display::SpriteDisplay::new(color_mode);
     let stdin = io::stdin();
     let mut stdout = io::stdout();
 
-    render_board(&board, color_mode);
+    render_board(&board, &strategy);
 
     loop {
         let side = if is_white_turn(move_index) {
@@ -67,7 +68,7 @@ pub fn run() {
                 board = Board::new();
                 move_index = 0;
                 println!("  Game reset.\n");
-                render_board(&board, color_mode);
+                render_board(&board, &strategy);
                 continue;
             }
             _ => {}
@@ -101,7 +102,7 @@ pub fn run() {
         let wav = audio::to_wav(&samples);
         audio::play(&wav);
 
-        render_board(&board, color_mode);
+        render_board(&board, &strategy);
         move_index += 1;
     }
 }
