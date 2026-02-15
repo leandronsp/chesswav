@@ -114,6 +114,7 @@ The `ascii` mode uses no colors and works in any terminal.
 - Ranks (1-8) map to octaves (low to high)
 - Each piece has a distinct timbre (waveform)
 - Castling (`O-O`, `O-O-O`) is supported
+- Check and checkmate detection with game-ending flow
 
 ### Piece Timbres
 
@@ -150,7 +151,7 @@ src/
 ├── engine/
 │   ├── mod.rs           # Engine module exports
 │   ├── chess.rs         # Domain types (Piece, Square, Move, parser)
-│   ├── board.rs         # Board representation & move execution
+│   ├── board.rs         # Board representation, move execution, check/checkmate detection
 │   └── hint.rs          # Move disambiguation hints
 ├── audio/
 │   ├── mod.rs           # Audio module exports

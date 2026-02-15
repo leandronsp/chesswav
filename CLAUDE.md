@@ -218,7 +218,7 @@ Run tests: `cargo test`
 │   ├── engine/
 │   │   ├── mod.rs           # Engine module exports
 │   │   ├── chess.rs         # Domain types (Piece, Square, Move, parser)
-│   │   ├── board.rs         # Board representation & move execution
+│   │   ├── board.rs         # Board representation, move execution, check/checkmate detection
 │   │   └── hint.rs          # Move disambiguation hints
 │   ├── audio/
 │   │   ├── mod.rs           # Audio module exports

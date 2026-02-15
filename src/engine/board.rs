@@ -7,9 +7,18 @@ pub enum Color {
     Black,
 }
 
+impl Color {
+    pub fn opponent(self) -> Color {
+        match self {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Board {
-    squares: [[Option<(Piece, Color)>; 8]; 8],
+    pub(crate) squares: [[Option<(Piece, Color)>; 8]; 8],
 }
 
 impl Default for Board {
@@ -47,12 +56,184 @@ impl Board {
         self.squares[rank as usize][file as usize]
     }
 
-    fn set(&mut self, file: u8, rank: u8, piece: (Piece, Color)) {
+    pub(crate) fn set(&mut self, file: u8, rank: u8, piece: (Piece, Color)) {
         self.squares[rank as usize][file as usize] = Some(piece);
     }
 
     fn clear_square(&mut self, file: u8, rank: u8) {
         self.squares[rank as usize][file as usize] = None;
+    }
+
+    /// Returns `true` if any piece of `attacker_color` attacks the `target` square.
+    pub fn is_square_attacked_by(&self, target: Square, attacker_color: Color) -> bool {
+        for rank in 0..8u8 {
+            for file in 0..8u8 {
+                if let Some((piece, color)) = self.get(file, rank)
+                    && color == attacker_color
+                    && self.attacks_square(piece, color, file, rank, &target)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn attacks_square(
+        &self,
+        piece: Piece,
+        color: Color,
+        file: u8,
+        rank: u8,
+        target: &Square,
+    ) -> bool {
+        match piece {
+            Piece::Pawn => Self::pawn_attacks_square(color, file, rank, target),
+            Piece::Knight => self.knight_can_reach(file, rank, target),
+            Piece::Bishop => self.bishop_can_reach(file, rank, target),
+            Piece::Rook => self.rook_can_reach(file, rank, target),
+            Piece::Queen => {
+                self.bishop_can_reach(file, rank, target)
+                    || self.rook_can_reach(file, rank, target)
+            }
+            Piece::King => self.king_can_reach(file, rank, target),
+        }
+    }
+
+    /// Returns `true` if a pawn of the given color at (file, rank) attacks the target square.
+    /// Pawns attack diagonally only — forward movement is not an attack.
+    fn pawn_attacks_square(color: Color, file: u8, rank: u8, target: &Square) -> bool {
+        let direction: i8 = match color {
+            Color::White => 1,
+            Color::Black => -1,
+        };
+        let file_distance = (target.file as i8) - (file as i8);
+        let rank_distance = (target.rank as i8) - (rank as i8);
+        file_distance.abs() == 1 && rank_distance == direction
+    }
+
+    /// Returns `true` if the king of the given color is in checkmate:
+    /// in check with no legal moves to escape.
+    pub fn is_checkmate(&self, color: Color) -> bool {
+        self.is_in_check(color) && !self.has_any_legal_move(color)
+    }
+
+    fn has_any_legal_move(&self, color: Color) -> bool {
+        for rank in 0..8u8 {
+            for file in 0..8u8 {
+                if let Some((piece, piece_color)) = self.get(file, rank)
+                    && piece_color == color
+                    && self.piece_has_legal_move(piece, color, file, rank)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn piece_has_legal_move(&self, piece: Piece, color: Color, file: u8, rank: u8) -> bool {
+        for dest_rank in 0..8u8 {
+            for dest_file in 0..8u8 {
+                let dest = Square { file: dest_file, rank: dest_rank };
+                if self.is_valid_destination(piece, color, file, rank, &dest)
+                    && self.move_leaves_king_safe(color, file, rank, &dest)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn is_valid_destination(
+        &self,
+        piece: Piece,
+        color: Color,
+        file: u8,
+        rank: u8,
+        dest: &Square,
+    ) -> bool {
+        // Can't capture own piece
+        if let Some((_, dest_color)) = self.get(dest.file, dest.rank)
+            && dest_color == color
+        {
+            return false;
+        }
+        match piece {
+            Piece::Pawn => self.pawn_can_move_to(color, file, rank, dest),
+            Piece::Knight => self.knight_can_reach(file, rank, dest),
+            Piece::Bishop => self.bishop_can_reach(file, rank, dest),
+            Piece::Rook => self.rook_can_reach(file, rank, dest),
+            Piece::Queen => {
+                self.bishop_can_reach(file, rank, dest) || self.rook_can_reach(file, rank, dest)
+            }
+            Piece::King => self.king_can_reach(file, rank, dest),
+        }
+    }
+
+    /// Like `pawn_can_reach` but for legal move generation:
+    /// diagonal moves require an enemy piece at the destination (captures must have a target).
+    fn pawn_can_move_to(&self, color: Color, file: u8, rank: u8, dest: &Square) -> bool {
+        let (direction, start_rank): (i8, u8) = match color {
+            Color::White => (1, 1),
+            Color::Black => (-1, 6),
+        };
+        let file_distance = (dest.file as i8) - (file as i8);
+        let rank_distance = (dest.rank as i8) - (rank as i8);
+
+        // Forward one square
+        if file_distance == 0
+            && rank_distance == direction
+            && self.get(dest.file, dest.rank).is_none()
+        {
+            return true;
+        }
+        // Forward two squares from starting rank
+        if file_distance == 0 && rank_distance == 2 * direction && rank == start_rank {
+            let mid_rank = (rank as i8 + direction) as u8;
+            if self.get(file, mid_rank).is_none() && self.get(dest.file, dest.rank).is_none() {
+                return true;
+            }
+        }
+        // Diagonal capture — must have an enemy piece at destination
+        if file_distance.abs() == 1
+            && rank_distance == direction
+            && let Some((_, dest_color)) = self.get(dest.file, dest.rank)
+        {
+            return dest_color != color;
+        }
+        false
+    }
+
+    fn move_leaves_king_safe(&self, color: Color, file: u8, rank: u8, dest: &Square) -> bool {
+        let mut trial = self.clone();
+        let piece_on_origin = trial.get(file, rank);
+        trial.clear_square(file, rank);
+        trial.squares[dest.rank as usize][dest.file as usize] = piece_on_origin;
+        !trial.is_in_check(color)
+    }
+
+    /// Returns `true` if the king of the given color is in check.
+    pub fn is_in_check(&self, color: Color) -> bool {
+        match self.find_king(color) {
+            Some(king_square) => self.is_square_attacked_by(king_square, color.opponent()),
+            None => false,
+        }
+    }
+
+    /// Returns the square of the king for the given color, or `None` if no king exists.
+    pub fn find_king(&self, color: Color) -> Option<Square> {
+        for rank in 0..8u8 {
+            for file in 0..8u8 {
+                if let Some((Piece::King, piece_color)) = self.get(file, rank)
+                    && piece_color == color
+                {
+                    return Some(Square { file, rank });
+                }
+            }
+        }
+        None
     }
 
     /// Resolves algebraic notation into a fully-specified move with origin, destination,
@@ -242,6 +423,182 @@ impl Board {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn white_opponent_is_black() {
+        assert_eq!(Color::White.opponent(), Color::Black);
+    }
+
+    #[test]
+    fn black_opponent_is_white() {
+        assert_eq!(Color::Black.opponent(), Color::White);
+    }
+
+    #[test]
+    fn find_king_white_initial_position() {
+        let board = Board::new();
+        assert_eq!(board.find_king(Color::White), Some(Square { file: 4, rank: 0 }));
+    }
+
+    #[test]
+    fn find_king_black_initial_position() {
+        let board = Board::new();
+        assert_eq!(board.find_king(Color::Black), Some(Square { file: 4, rank: 7 }));
+    }
+
+    #[test]
+    fn find_king_empty_board_returns_none() {
+        let board = Board { squares: [[None; 8]; 8] };
+        assert_eq!(board.find_king(Color::White), None);
+    }
+
+    #[test]
+    fn white_pawn_attacks_diagonals() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 3, (Piece::Pawn, Color::White)); // e4
+        let left_diagonal = Square { file: 3, rank: 4 }; // d5
+        let right_diagonal = Square { file: 5, rank: 4 }; // f5
+        assert!(board.is_square_attacked_by(left_diagonal, Color::White));
+        assert!(board.is_square_attacked_by(right_diagonal, Color::White));
+    }
+
+    #[test]
+    fn white_pawn_does_not_attack_forward() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 3, (Piece::Pawn, Color::White)); // e4
+        let forward = Square { file: 4, rank: 4 }; // e5
+        assert!(!board.is_square_attacked_by(forward, Color::White));
+    }
+
+    #[test]
+    fn black_pawn_attacks_diagonals() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 6, (Piece::Pawn, Color::Black)); // e7
+        let left_diagonal = Square { file: 3, rank: 5 }; // d6
+        let right_diagonal = Square { file: 5, rank: 5 }; // f6
+        assert!(board.is_square_attacked_by(left_diagonal, Color::Black));
+        assert!(board.is_square_attacked_by(right_diagonal, Color::Black));
+    }
+
+    #[test]
+    fn knight_attacks_l_shape() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 3, (Piece::Knight, Color::White)); // Ne4
+        let target = Square { file: 5, rank: 5 }; // f6
+        assert!(board.is_square_attacked_by(target, Color::White));
+    }
+
+    #[test]
+    fn rook_attacks_clear_path() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(0, 0, (Piece::Rook, Color::White)); // Ra1
+        let target = Square { file: 0, rank: 7 }; // a8
+        assert!(board.is_square_attacked_by(target, Color::White));
+    }
+
+    #[test]
+    fn rook_blocked_does_not_attack() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(0, 0, (Piece::Rook, Color::White)); // Ra1
+        board.set(0, 3, (Piece::Pawn, Color::White)); // blocker on a4
+        let target = Square { file: 0, rank: 7 }; // a8
+        assert!(!board.is_square_attacked_by(target, Color::White));
+    }
+
+    #[test]
+    fn king_attacks_adjacent_square() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 0, (Piece::King, Color::White)); // Ke1
+        let target = Square { file: 5, rank: 1 }; // f2
+        assert!(board.is_square_attacked_by(target, Color::White));
+    }
+
+    #[test]
+    fn initial_position_not_in_check() {
+        let board = Board::new();
+        assert!(!board.is_in_check(Color::White));
+        assert!(!board.is_in_check(Color::Black));
+    }
+
+    #[test]
+    fn queen_gives_check() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 0, (Piece::King, Color::White)); // Ke1
+        board.set(4, 7, (Piece::Queen, Color::Black)); // Qe8 attacks along file
+        assert!(board.is_in_check(Color::White));
+    }
+
+    #[test]
+    fn king_not_in_check_when_no_king() {
+        let board = Board { squares: [[None; 8]; 8] };
+        assert!(!board.is_in_check(Color::White));
+    }
+
+    /// Helper to play a sequence of moves on a fresh board for testing.
+    fn play_moves(notations: &[&str]) -> Board {
+        let mut board = Board::new();
+        for (index, notation) in notations.iter().enumerate() {
+            let chess_move = NotationMove::parse(notation, index).unwrap();
+            let color = if index % 2 == 0 { Color::White } else { Color::Black };
+            let resolved = board.resolve_move(&chess_move, notation, color).unwrap();
+            board.apply_move(&resolved);
+        }
+        board
+    }
+
+    #[test]
+    fn scholars_mate_is_checkmate() {
+        // 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6 4.Qxf7#
+        let board = play_moves(&["e4", "e5", "Bc4", "Nc6", "Qh5", "Nf6", "Qxf7#"]);
+        assert!(board.is_checkmate(Color::Black));
+    }
+
+    #[test]
+    fn not_checkmate_when_king_can_escape() {
+        // White queen checks but king has escape squares
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 7, (Piece::King, Color::Black));
+        board.set(4, 5, (Piece::Queen, Color::White)); // Queen checks along file
+        // King can move to d8, d7, f8, f7 — not checkmate
+        assert!(!board.is_checkmate(Color::Black));
+    }
+
+    #[test]
+    fn not_checkmate_when_piece_can_block() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 0, (Piece::King, Color::White));
+        board.set(4, 7, (Piece::Rook, Color::Black)); // Rook checks along e-file
+        board.set(1, 2, (Piece::Rook, Color::White)); // White rook can block on e2
+        assert!(!board.is_checkmate(Color::White));
+    }
+
+    #[test]
+    fn not_checkmate_when_attacker_can_be_captured() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(4, 0, (Piece::King, Color::White));
+        board.set(4, 1, (Piece::Queen, Color::Black)); // Queen gives check on e2
+        board.set(3, 0, (Piece::Rook, Color::White)); // King can't escape but...
+        // King can capture the queen at e2
+        assert!(!board.is_checkmate(Color::White));
+    }
+
+    #[test]
+    fn not_checkmate_when_not_in_check() {
+        let board = Board::new();
+        assert!(!board.is_checkmate(Color::White));
+        assert!(!board.is_checkmate(Color::Black));
+    }
+
+    #[test]
+    fn back_rank_mate_is_checkmate() {
+        let mut board = Board { squares: [[None; 8]; 8] };
+        board.set(6, 0, (Piece::King, Color::White)); // Kg1
+        board.set(5, 1, (Piece::Pawn, Color::White)); // Pf2
+        board.set(6, 1, (Piece::Pawn, Color::White)); // Pg2
+        board.set(7, 1, (Piece::Pawn, Color::White)); // Ph2
+        board.set(0, 0, (Piece::Rook, Color::Black)); // Ra1 — back rank mate
+        assert!(board.is_checkmate(Color::White));
+    }
 
     #[test]
     fn initial_position_white_pawns() {
