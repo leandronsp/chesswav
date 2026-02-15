@@ -1,4 +1,4 @@
-use crate::board::Color;
+use crate::engine::board::Color;
 
 use super::{ColorMode, SquareShade};
 

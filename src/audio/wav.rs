@@ -23,7 +23,7 @@
 //! 44      ...   Sample data (little-endian)
 //! ```
 
-use crate::audio::{BITS_PER_SAMPLE, NUM_CHANNELS, SAMPLE_RATE};
+use super::{BITS_PER_SAMPLE, NUM_CHANNELS, SAMPLE_RATE};
 
 pub const HEADER_SIZE: usize = 44;
 

@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 
-use crate::board::Color;
-use crate::chess::Piece;
+use crate::engine::board::Color;
+use crate::engine::chess::Piece;
 
 use super::{DisplayStrategy, SquareShade, FILE_LABELS};
 

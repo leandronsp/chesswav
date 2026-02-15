@@ -18,9 +18,14 @@
 //! [WAV file bytes]
 //! ```
 
-use crate::blend::Blend;
-use crate::chess::{NotationMove, Piece, Threat};
-use crate::{freq, synth, wav};
+mod blend;
+mod freq;
+mod synth;
+mod wav;
+mod waveform;
+
+use blend::Blend;
+use crate::engine::chess::{NotationMove, Piece, Threat};
 
 // Audio format constants
 pub const SAMPLE_RATE: u32 = 44100;

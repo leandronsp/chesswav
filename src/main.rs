@@ -26,8 +26,8 @@
 use std::io::{self, Read, Write};
 
 use chesswav::audio;
-use chesswav::display;
-use chesswav::repl;
+use chesswav::tui::display;
+use chesswav::tui::repl;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
