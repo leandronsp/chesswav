@@ -18,7 +18,7 @@ impl Color {
 
 #[derive(Debug, Clone)]
 pub struct Board {
-    pub(crate) squares: [[Option<(Piece, Color)>; 8]; 8],
+    squares: [[Option<(Piece, Color)>; 8]; 8],
 }
 
 impl Default for Board {
@@ -56,7 +56,7 @@ impl Board {
         self.squares[rank as usize][file as usize]
     }
 
-    pub(crate) fn set(&mut self, file: u8, rank: u8, piece: (Piece, Color)) {
+    fn set(&mut self, file: u8, rank: u8, piece: (Piece, Color)) {
         self.squares[rank as usize][file as usize] = Some(piece);
     }
 
@@ -421,6 +421,19 @@ impl Board {
 }
 
 #[cfg(test)]
+impl Board {
+    /// Creates an empty board with no pieces. Test-only.
+    pub(crate) fn empty() -> Self {
+        Board { squares: [[None; 8]; 8] }
+    }
+
+    /// Places a piece on the board. Test-only.
+    pub(crate) fn set_piece(&mut self, file: u8, rank: u8, piece: (Piece, Color)) {
+        self.set(file, rank, piece);
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -448,13 +461,13 @@ mod tests {
 
     #[test]
     fn find_king_empty_board_returns_none() {
-        let board = Board { squares: [[None; 8]; 8] };
+        let board = Board::empty();
         assert_eq!(board.find_king(Color::White), None);
     }
 
     #[test]
     fn white_pawn_attacks_diagonals() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 3, (Piece::Pawn, Color::White)); // e4
         let left_diagonal = Square { file: 3, rank: 4 }; // d5
         let right_diagonal = Square { file: 5, rank: 4 }; // f5
@@ -464,7 +477,7 @@ mod tests {
 
     #[test]
     fn white_pawn_does_not_attack_forward() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 3, (Piece::Pawn, Color::White)); // e4
         let forward = Square { file: 4, rank: 4 }; // e5
         assert!(!board.is_square_attacked_by(forward, Color::White));
@@ -472,7 +485,7 @@ mod tests {
 
     #[test]
     fn black_pawn_attacks_diagonals() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 6, (Piece::Pawn, Color::Black)); // e7
         let left_diagonal = Square { file: 3, rank: 5 }; // d6
         let right_diagonal = Square { file: 5, rank: 5 }; // f6
@@ -482,7 +495,7 @@ mod tests {
 
     #[test]
     fn knight_attacks_l_shape() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 3, (Piece::Knight, Color::White)); // Ne4
         let target = Square { file: 5, rank: 5 }; // f6
         assert!(board.is_square_attacked_by(target, Color::White));
@@ -490,7 +503,7 @@ mod tests {
 
     #[test]
     fn rook_attacks_clear_path() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(0, 0, (Piece::Rook, Color::White)); // Ra1
         let target = Square { file: 0, rank: 7 }; // a8
         assert!(board.is_square_attacked_by(target, Color::White));
@@ -498,7 +511,7 @@ mod tests {
 
     #[test]
     fn rook_blocked_does_not_attack() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(0, 0, (Piece::Rook, Color::White)); // Ra1
         board.set(0, 3, (Piece::Pawn, Color::White)); // blocker on a4
         let target = Square { file: 0, rank: 7 }; // a8
@@ -507,7 +520,7 @@ mod tests {
 
     #[test]
     fn king_attacks_adjacent_square() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 0, (Piece::King, Color::White)); // Ke1
         let target = Square { file: 5, rank: 1 }; // f2
         assert!(board.is_square_attacked_by(target, Color::White));
@@ -522,7 +535,7 @@ mod tests {
 
     #[test]
     fn queen_gives_check() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 0, (Piece::King, Color::White)); // Ke1
         board.set(4, 7, (Piece::Queen, Color::Black)); // Qe8 attacks along file
         assert!(board.is_in_check(Color::White));
@@ -530,7 +543,7 @@ mod tests {
 
     #[test]
     fn king_not_in_check_when_no_king() {
-        let board = Board { squares: [[None; 8]; 8] };
+        let board = Board::empty();
         assert!(!board.is_in_check(Color::White));
     }
 
@@ -556,7 +569,7 @@ mod tests {
     #[test]
     fn not_checkmate_when_king_can_escape() {
         // White queen checks but king has escape squares
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 7, (Piece::King, Color::Black));
         board.set(4, 5, (Piece::Queen, Color::White)); // Queen checks along file
         // King can move to d8, d7, f8, f7 — not checkmate
@@ -565,7 +578,7 @@ mod tests {
 
     #[test]
     fn not_checkmate_when_piece_can_block() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 0, (Piece::King, Color::White));
         board.set(4, 7, (Piece::Rook, Color::Black)); // Rook checks along e-file
         board.set(1, 2, (Piece::Rook, Color::White)); // White rook can block on e2
@@ -574,7 +587,7 @@ mod tests {
 
     #[test]
     fn not_checkmate_when_attacker_can_be_captured() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(4, 0, (Piece::King, Color::White));
         board.set(4, 1, (Piece::Queen, Color::Black)); // Queen gives check on e2
         board.set(3, 0, (Piece::Rook, Color::White)); // King can't escape but...
@@ -591,7 +604,7 @@ mod tests {
 
     #[test]
     fn back_rank_mate_is_checkmate() {
-        let mut board = Board { squares: [[None; 8]; 8] };
+        let mut board = Board::empty();
         board.set(6, 0, (Piece::King, Color::White)); // Kg1
         board.set(5, 1, (Piece::Pawn, Color::White)); // Pf2
         board.set(6, 1, (Piece::Pawn, Color::White)); // Pg2
