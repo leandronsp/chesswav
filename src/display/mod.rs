@@ -122,6 +122,43 @@ pub fn detect_color_mode() -> ColorMode {
     color_mode_from_env(&colorterm)
 }
 
+const SIDEBAR_HEADER: &str = "Moves";
+const SIDEBAR_DIVIDER: &str = "─────────────";
+
+pub fn format_move_list<S: AsRef<str>>(half_moves: &[S]) -> Vec<String> {
+    half_moves
+        .chunks(2)
+        .enumerate()
+        .map(|(index, pair)| {
+            let move_number = index + 1;
+            let white_move = pair[0].as_ref();
+            match pair.get(1) {
+                Some(black_move) => {
+                    format!("{move_number}. {white_move:<6}{}", black_move.as_ref())
+                }
+                None => format!("{move_number}. {white_move}"),
+            }
+        })
+        .collect()
+}
+
+pub fn cursor_up_and_clear(writer: &mut impl Write, line_count: usize) -> io::Result<()> {
+    write!(writer, "\x1b[{line_count}A\x1b[J")
+}
+
+pub fn layout_height(strategy: &dyn DisplayStrategy) -> usize {
+    1 + BOARD_SIZE as usize * strategy.square_height() + 1
+}
+
+pub fn sidebar_lines<S: AsRef<str>>(half_moves: &[S], available_height: usize) -> Vec<String> {
+    let mut lines = vec![SIDEBAR_HEADER.to_string(), SIDEBAR_DIVIDER.to_string()];
+    let move_lines = format_move_list(half_moves);
+    let max_move_lines = available_height.saturating_sub(2);
+    let skip_count = move_lines.len().saturating_sub(max_move_lines);
+    lines.extend(move_lines.into_iter().skip(skip_count));
+    lines
+}
+
 fn square_shade(file: u8, rank: u8) -> SquareShade {
     if (file + rank) % 2 != 0 {
         SquareShade::Light
@@ -132,11 +169,20 @@ fn square_shade(file: u8, rank: u8) -> SquareShade {
 
 /// `&dyn DisplayStrategy` accepts any strategy behind a trait object,
 /// matching the `Box<dyn DisplayStrategy>` the REPL holds.
-pub fn render(
+pub fn render<S: AsRef<str>>(
     board: &Board,
     writer: &mut impl Write,
     strategy: &dyn DisplayStrategy,
+    moves: &[S],
 ) -> io::Result<()> {
+    strategy.render_file_labels(writer)?;
+    let board_height = BOARD_SIZE as usize * strategy.square_height();
+    let sidebar = if moves.is_empty() {
+        vec![]
+    } else {
+        sidebar_lines(moves, board_height)
+    };
+    let mut board_line_index = 0;
     for rank in (0..BOARD_SIZE).rev() {
         for row in 0..strategy.square_height() {
             strategy.render_rank_label(writer, rank, row)?;
@@ -145,16 +191,187 @@ pub fn render(
                 let square = board.get(file, rank);
                 strategy.render_square_row(writer, square, shade, row)?;
             }
+            if let Some(sidebar_text) = sidebar.get(board_line_index) {
+                write!(writer, "   {sidebar_text}")?;
+            }
+            board_line_index += 1;
             writeln!(writer)?;
         }
     }
     strategy.render_file_labels(writer)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const NO_MOVES: &[&str] = &[];
+
+    #[test]
+    fn format_move_list_empty_input() {
+        let result = format_move_list(NO_MOVES);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn format_move_list_single_move() {
+        let moves = vec!["e4".to_string()];
+        let result = format_move_list(&moves);
+        assert_eq!(result, vec!["1. e4"]);
+    }
+
+    #[test]
+    fn format_move_list_complete_pair() {
+        let moves = vec!["e4".to_string(), "e5".to_string()];
+        let result = format_move_list(&moves);
+        assert_eq!(result, vec!["1. e4    e5"]);
+    }
+
+    #[test]
+    fn format_move_list_multiple_pairs() {
+        let moves = vec![
+            "e4".to_string(),
+            "e5".to_string(),
+            "Nf3".to_string(),
+            "Nc6".to_string(),
+        ];
+        let result = format_move_list(&moves);
+        assert_eq!(result, vec!["1. e4    e5", "2. Nf3   Nc6"]);
+    }
+
+    #[test]
+    fn format_move_list_odd_count() {
+        let moves = vec![
+            "e4".to_string(),
+            "e5".to_string(),
+            "Nf3".to_string(),
+        ];
+        let result = format_move_list(&moves);
+        assert_eq!(result, vec!["1. e4    e5", "2. Nf3"]);
+    }
+
+    #[test]
+    fn sidebar_lines_empty_moves() {
+        let result = sidebar_lines(NO_MOVES, 8);
+        assert_eq!(result, vec!["Moves", "─────────────"]);
+    }
+
+    #[test]
+    fn sidebar_lines_with_moves() {
+        let moves = vec!["e4".to_string(), "e5".to_string()];
+        let result = sidebar_lines(&moves, 8);
+        assert_eq!(result, vec!["Moves", "─────────────", "1. e4    e5"]);
+    }
+
+    #[test]
+    fn sidebar_lines_scrolling() {
+        let moves: Vec<String> = (0..20)
+            .map(|i| format!("m{i}"))
+            .collect();
+        let result = sidebar_lines(&moves, 8);
+        assert_eq!(result.len(), 8);
+        assert_eq!(result[0], "Moves");
+        assert_eq!(result[1], "─────────────");
+        assert_eq!(result.last().unwrap(), "10. m18   m19");
+    }
+
+    #[test]
+    fn sidebar_lines_exact_fit() {
+        let moves = vec![
+            "e4".to_string(), "e5".to_string(),
+            "Nf3".to_string(), "Nc6".to_string(),
+            "Bb5".to_string(), "a6".to_string(),
+        ];
+        let result = sidebar_lines(&moves, 5);
+        assert_eq!(result.len(), 5);
+        assert_eq!(result[0], "Moves");
+        assert_eq!(result[1], "─────────────");
+        assert_eq!(result[2], "1. e4    e5");
+        assert_eq!(result[3], "2. Nf3   Nc6");
+        assert_eq!(result[4], "3. Bb5   a6");
+    }
+
+    #[test]
+    fn render_with_empty_moves_has_no_sidebar() {
+        let board = Board::new();
+        let mut buf = Vec::new();
+        render(&board, &mut buf, &AsciiDisplay, NO_MOVES).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(!output.contains("Moves"));
+    }
+
+    #[test]
+    fn render_with_moves_shows_sidebar() {
+        let board = Board::new();
+        let moves = vec!["e4".to_string(), "e5".to_string()];
+        let mut buf = Vec::new();
+        render(&board, &mut buf, &AsciiDisplay, &moves).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert!(output.contains("Moves"), "should contain sidebar header");
+        assert!(output.contains("─────────────"), "should contain sidebar divider");
+        assert!(output.contains("1. e4    e5"), "should contain move line");
+    }
+
+    #[test]
+    fn render_sidebar_not_on_file_label_lines() {
+        let board = Board::new();
+        let moves = vec!["e4".to_string(), "e5".to_string()];
+        let mut buf = Vec::new();
+        render(&board, &mut buf, &AsciiDisplay, &moves).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        let lines: Vec<&str> = output.lines().collect();
+        let first_line = lines[0];
+        let last_line = lines.last().unwrap();
+        assert!(!first_line.contains("Moves"), "top file labels should have no sidebar");
+        assert!(!last_line.contains("Moves"), "bottom file labels should have no sidebar");
+    }
+
+    #[test]
+    fn render_with_moves_same_line_count() {
+        let board = Board::new();
+        let moves = vec!["e4".to_string(), "e5".to_string()];
+        let mut buf_no_moves = Vec::new();
+        let mut buf_with_moves = Vec::new();
+        render(&board, &mut buf_no_moves, &AsciiDisplay, NO_MOVES).unwrap();
+        render(&board, &mut buf_with_moves, &AsciiDisplay, &moves).unwrap();
+        let lines_no_moves = String::from_utf8(buf_no_moves).unwrap().lines().count();
+        let lines_with_moves = String::from_utf8(buf_with_moves).unwrap().lines().count();
+        assert_eq!(lines_no_moves, lines_with_moves, "sidebar should not add extra lines");
+    }
+
+    #[test]
+    fn cursor_up_and_clear_ten_lines() {
+        let mut buf = Vec::new();
+        cursor_up_and_clear(&mut buf, 10).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert_eq!(output, "\x1b[10A\x1b[J");
+    }
+
+    #[test]
+    fn cursor_up_and_clear_one_line() {
+        let mut buf = Vec::new();
+        cursor_up_and_clear(&mut buf, 1).unwrap();
+        let output = String::from_utf8(buf).unwrap();
+        assert_eq!(output, "\x1b[1A\x1b[J");
+    }
+
+    #[test]
+    fn layout_height_ascii() {
+        let strategy = AsciiDisplay;
+        assert_eq!(layout_height(&strategy), 10);
+    }
+
+    #[test]
+    fn layout_height_sprite() {
+        let strategy = SpriteDisplay::new(ColorMode::TrueColor);
+        assert_eq!(layout_height(&strategy), 26);
+    }
+
+    #[test]
+    fn layout_height_unicode() {
+        let strategy = UnicodeDisplay::new(ColorMode::TrueColor);
+        assert_eq!(layout_height(&strategy), 10);
+    }
 
     #[test]
     fn square_shade_corners() {
@@ -215,7 +432,7 @@ mod tests {
     fn display_initial_position() {
         let board = Board::new();
         let mut buf = Vec::new();
-        render(&board, &mut buf, &AsciiDisplay).unwrap();
+        render(&board, &mut buf, &AsciiDisplay, NO_MOVES).unwrap();
         let output = String::from_utf8(buf).unwrap();
         assert!(output.contains(" r "), "should contain black rook");
         assert!(output.contains(" P "), "should contain white pawn");
@@ -227,7 +444,7 @@ mod tests {
         let board = Board::new();
         let strategy = SpriteDisplay::new(ColorMode::TrueColor);
         let mut buf = Vec::new();
-        render(&board, &mut buf, &strategy).unwrap();
+        render(&board, &mut buf, &strategy, NO_MOVES).unwrap();
         let output = String::from_utf8(buf).unwrap();
         for rank in 1..=8 {
             assert!(output.contains(&format!(" {rank} ")), "missing rank {rank}");
@@ -239,7 +456,7 @@ mod tests {
         assert!(output.contains('▄'), "should contain lower half blocks");
         assert!(output.contains('▀'), "should contain upper half blocks");
         let line_count = output.lines().count();
-        assert_eq!(line_count, 25, "expected 25 lines, got {line_count}");
+        assert_eq!(line_count, 26, "expected 26 lines, got {line_count}");
     }
 
     #[test]
@@ -247,7 +464,7 @@ mod tests {
         let board = Board::new();
         let strategy = AsciiDisplay;
         let mut buf = Vec::new();
-        render(&board, &mut buf, &strategy).unwrap();
+        render(&board, &mut buf, &strategy, NO_MOVES).unwrap();
         let output = String::from_utf8(buf).unwrap();
         for rank in 1..=8 {
             assert!(output.contains(&format!(" {rank} ")), "missing rank {rank}");
@@ -259,7 +476,7 @@ mod tests {
         assert!(output.contains(" P "), "should contain pawn");
         assert!(output.contains(" . "), "should contain empty square");
         let line_count = output.lines().count();
-        assert_eq!(line_count, 9, "8 ranks + 1 file label row = 9 lines");
+        assert_eq!(line_count, 10, "top labels + 8 ranks + bottom labels = 10 lines");
     }
 
     #[test]
@@ -267,7 +484,7 @@ mod tests {
         let board = Board::new();
         let strategy = SpriteDisplay::new(ColorMode::TrueColor);
         let mut buf = Vec::new();
-        render(&board, &mut buf, &strategy).unwrap();
+        render(&board, &mut buf, &strategy, NO_MOVES).unwrap();
         let output = String::from_utf8(buf).unwrap();
         for rank in 1..=8 {
             assert!(
@@ -279,7 +496,7 @@ mod tests {
         assert!(output.contains('▄'), "should contain lower half blocks");
         assert!(output.contains('▀'), "should contain upper half blocks");
         let line_count = output.lines().count();
-        assert_eq!(line_count, 25, "expected 25 lines, got {line_count}");
+        assert_eq!(line_count, 26, "expected 26 lines, got {line_count}");
     }
 
     #[test]
@@ -287,11 +504,11 @@ mod tests {
         let board = Board::new();
         let strategy = UnicodeDisplay::new(ColorMode::TrueColor);
         let mut buf = Vec::new();
-        render(&board, &mut buf, &strategy).unwrap();
+        render(&board, &mut buf, &strategy, NO_MOVES).unwrap();
         let output = String::from_utf8(buf).unwrap();
         assert!(output.contains('♔'), "should contain white king");
         assert!(output.contains('♟'), "should contain black pawn");
         let line_count = output.lines().count();
-        assert_eq!(line_count, 9, "8 ranks + 1 file label row = 9 lines");
+        assert_eq!(line_count, 10, "top labels + 8 ranks + bottom labels = 10 lines");
     }
 }

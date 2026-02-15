@@ -64,7 +64,35 @@ echo "e4 e5 Nf3 Nc6" | ./target/release/chesswav > game.wav
 
 ## Display
 
-Interactive mode renders the board using half-block sprite pixel art with ANSI colors. The color depth is auto-detected from the `COLORTERM` environment variable:
+Interactive mode supports three display modes:
+
+| Mode | Description |
+|------|-------------|
+| `sprite` | Half-block pixel art with ANSI colors (default) |
+| `unicode` | Unicode chess symbols (♔♕♖♗♘♙ / ♚♛♜♝♞♟) |
+| `ascii` | Plain text letters (K Q R B N P / k q r b n p) |
+
+### Setting the display mode
+
+At startup with `--display` (or `-d`):
+
+```bash
+chesswav --interactive --display sprite
+chesswav --interactive -d unicode
+chesswav --interactive -d ascii
+```
+
+Or switch at any time during the REPL:
+
+```
+display unicode
+display ascii
+display sprite
+```
+
+### Color support
+
+The `sprite` and `unicode` modes use ANSI colors. Color depth is auto-detected from the `COLORTERM` environment variable:
 
 | `COLORTERM` value | Color mode |
 |-------------------|------------|
@@ -77,6 +105,8 @@ Most modern terminals (iTerm2, Ghostty, WezTerm, Windows Terminal, GNOME Termina
 ```bash
 COLORTERM=truecolor chesswav --interactive
 ```
+
+The `ascii` mode uses no colors and works in any terminal.
 
 ## How it works
 
