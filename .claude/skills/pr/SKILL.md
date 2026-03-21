@@ -14,11 +14,7 @@ Creates or updates a draft pull request for the current branch.
 
 ## Workflow
 
-### 1. Run tech debt audit
-
-Invoke `/techdebt` to scan for issues. If there are **Critical** items, fix them first.
-
-### 2. Ensure feature branch and commit
+### 1. Ensure feature branch and commit
 
 **NEVER commit to `main` unless the user explicitly requests it.**
 
@@ -52,16 +48,16 @@ git commit -m "<type>: <description>"
 
 Only proceed to the next step once all changes are committed on a feature branch.
 
-### 3. Gather context
+### 2. Gather context
 
 ```bash
 git log main..HEAD --oneline
 git diff main...HEAD --stat
 ```
 
-### 3.5. Identify source issue
+### 3. Identify source issue
 
-If the PR was created from a `/tdd <issue>` workflow, you already have the issue number in context. Otherwise, check the branch name or commit messages for issue references.
+If the PR was created from a `/dev <issue>` workflow, you already have the issue number in context. Otherwise, check the branch name or commit messages for issue references.
 
 If an issue is identified, it will be linked in the PR body using a GitHub closing keyword (see template below). When the PR is merged, GitHub automatically closes the linked issue and marks it as "completed".
 
@@ -71,11 +67,11 @@ If an issue is identified, it will be linked in the PR body using a GitHub closi
 gh pr view --json number,title,body 2>/dev/null
 ```
 
-### 4. Write PR description
+### 5. Write PR description
 
 Use the template below. Keep it concise and natural.
 
-### 5a. If NO existing PR - Create draft PR
+### 6a. If NO existing PR - Create draft PR
 
 ```bash
 gh pr create --draft --title "<title>" --body "$(cat <<'EOF'
@@ -84,7 +80,7 @@ EOF
 )"
 ```
 
-### 5b. If PR already exists - Update description
+### 6b. If PR already exists - Update description
 
 ```bash
 gh pr edit --title "<title>" --body "$(cat <<'EOF'
@@ -127,10 +123,6 @@ Closes #<issue_number>
 
 - [ ] `cargo test` passes
 - [ ] `cargo clippy -- -D warnings` passes
-
-## Tech Debt
-
-- [ ] `/techdebt` audit passed (no Critical items)
 ```
 
 Omit the `Closes #...` line if there is no source issue.
@@ -144,5 +136,5 @@ Omit the `Closes #...` line if there is no source issue.
 ## Pipeline
 
 ```
-/tdd <issue_url> -> /review -> /pr -> merge
+/po -> GitHub issue -> /dev -> /review -> /commit -> /pr
 ```

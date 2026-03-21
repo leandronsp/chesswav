@@ -69,13 +69,13 @@ This is not optional. Agents must use the TDD approach by default:
 
 1. **RED** — Write one failing test. Run `cargo test`. It **must fail**. If it passes after multiple attempts to make it fail, ask the user for intervention.
 2. **GREEN** — Write the minimum code to make the test pass. Run `cargo test`. It **must pass**. If it fails after multiple fix attempts, ask the user for intervention.
-3. **REFACTOR** — Invoke `/refactor` on the changed code and its boundaries. Baby steps only. Tests must stay green after each refactor step.
+3. **REFACTOR** — Clean up the changed code and its boundaries. Baby steps only. Tests must stay green after each refactor step.
 
 **Baby steps**: one test at a time, one small change at a time. Never write multiple tests before making them pass. Never write large chunks of production code without a failing test driving it.
 
 **Loop**: repeat RED → GREEN → REFACTOR for each behavior increment until the task is complete.
 
-**Before writing any code, always read the `/tdd` skill** (`.claude/skills/tdd/SKILL.md`) for the full process, retry thresholds, and escalation rules.
+**Before writing any code, always read the `/dev` skill** (`.claude/skills/dev/SKILL.md`) for the full process, retry thresholds, and escalation rules.
 
 ## Codebase Conventions
 
@@ -254,27 +254,43 @@ Run tests: `cargo test`
 Skills form a pipeline from idea to shipped code, with a feedback loop between implementer and PO:
 
 ```
-/po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
-                     ^                |
-                     |                | (PRD feedback)
-                     +--- /po amend --+
+/po -> GitHub issue -> /dev -> /review -> /commit -> /pr
+         ^                |
+         |                | (PRD feedback)
+         +--- /po amend --+
 ```
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
-| `/po` | Scan codebase, create/amend GitHub issue with PRD | Starting a new feature, defining requirements, amending PRD after implementer feedback |
-| `/tdd` | Fetch issue, research, plan, implement with red-green-refactor | Building features from GitHub issues |
-| `/refactor` | Baby-step cleanup after green | Called by `/tdd` after each GREEN phase |
-| `/review` | Code review + techdebt audit, plan fixes | After implementation, before PR |
-| `/techdebt` | Audit diff for pattern deviations and code smells | Called by `/review` and `/pr` |
-| `/pr` | Open/update draft PR on GitHub | After review passes, before merge |
-| `/commit` | Git commit following conventions | After tests pass |
+| `/po` | Scan codebase, create/amend GitHub issue with PRD + technical breakdown | Starting a new feature, defining requirements, task breakdown |
+| `/dev` | Fetch issue, research, plan, implement with red-green-refactor | Building features from GitHub issues |
+| `/review` | 3 parallel code-reviewer agents + plan-reviewer gate | After implementation, before commit |
+| `/commit` | Git commit following conventions | After review passes |
+| `/pr` | Open/update draft PR on GitHub | After commit, before merge |
 
-### Standalone Skills
+### Reference Skills
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
-| `/analyst` | Create SPEC from PRD (detailed task breakdown) | When you need a formal spec document |
-| `/bug-finder` | Edge case hunting, stress testing | Something feels fragile, need to break it |
 | `/synth` | Audio synthesis reference (WAV, waveforms, ADSR) | Working on audio modules |
-| `/address-pr-comments` | Fetch and address PR review comments | After receiving PR feedback |
+| `/debug` | Rust debugging workflow (dbg!, cargo test flags, WAV inspection) | Investigating failures, tracing issues |
+
+## Rules
+
+Contextual rules loaded automatically by file glob match:
+
+| Rule | Globs | Purpose |
+|------|-------|---------|
+| `rust.md` | `src/**/*.rs`, `tests/**/*.rs` | Rust patterns, idioms, anti-patterns |
+| `testing.md` | `src/**/*.rs`, `tests/**/*.rs` | TDD conventions, test structure |
+| `git.md` | `**/*` | Commit format, branching, staging |
+
+## Agents
+
+Subagents used by skills for parallel and specialized work:
+
+| Agent | Model | Used By | Purpose |
+|-------|-------|---------|---------|
+| `code-reviewer` | sonnet | `/review`, `/dev` | Staff engineer review (correctness, idioms, safety, architecture) |
+| `scout` | sonnet | `/dev` | Read-only codebase exploration, architecture research |
+| `plan-reviewer` | sonnet | `/review`, `/dev` | Stress-test implementation plans before coding |

@@ -1,6 +1,6 @@
 ---
-name: tdd
-description: Implementer - fetches a GitHub issue, builds an implementation plan, then implements using TDD. Use when: implement, build this, code this, add this feature, TDD, test first, red green refactor, pick a task, next task.
+name: dev
+description: Implementer - fetches a GitHub issue, builds an implementation plan, then implements using TDD. Use when: implement, build this, code this, add this feature, TDD, test first, red green refactor, pick a task, next task, dev.
 ---
 
 # Implementer - TDD Engineer
@@ -9,22 +9,19 @@ description: Implementer - fetches a GitHub issue, builds an implementation plan
 
 ## Usage
 
-- `/tdd <issue_url>` - Fetch issue, plan, and implement
-- `/tdd <issue_number>` - Same, using issue number (e.g. `/tdd 5`)
-- `/tdd` - Ask user which issue to implement
+- `/dev <issue_url>` - Fetch issue, plan, and implement
+- `/dev <issue_number>` - Same, using issue number (e.g. `/dev 5`)
+- `/dev` - Ask user which issue to implement
 
 ## Workflow
 
 ### Phase 1: Understand
 
 1. **Fetch the issue** using `gh issue view <number> --json title,body`
-2. **Research the codebase independently** — don't assume the PRD covers everything:
-   - Read `src/lib.rs` for module structure
-   - Explore all source files relevant to the issue (read them, don't skim)
-   - Understand existing types, traits, patterns, and conventions in use
-   - Trace call paths and data flow through the affected areas
-   - Look for edge cases, constraints, or existing behavior the PRD may not mention
-   - Check tests for implicit contracts and expected behavior
+2. **Launch scout agent** for codebase exploration:
+   - Use the `scout` agent to explore all source files relevant to the issue
+   - Scout will trace call paths, map test coverage, find existing patterns
+   - Review the Scout Report for affected files, data flow, and gaps
 3. **Identify the gap** between current state and what the issue requires
 4. **Challenge the PRD** if research reveals:
    - Missing requirements or overlooked edge cases
@@ -55,12 +52,20 @@ This is not a formality. The implementer is expected to push back when research 
    - Identify files to create/modify
    - Identify new types, functions, error types
    - Note dependencies between tasks
-9. **Present the plan** to the user for approval
+9. **Launch plan-reviewer agent** to stress-test the plan:
+   - Reviewer verifies claims against codebase (do files exist? are patterns real?)
+   - Finds gaps (missing error states, untested paths, chess edge cases)
+   - Checks for over-engineering
+   - Suggests better patterns from existing code
+10. **Revise plan** based on reviewer feedback, then present to user for approval
 
 ### Phase 3: Implement (TDD)
 
-10. **Create a feature branch**: `feature/<short-name>`
-11. **For each task**, follow the RED-GREEN-REFACTOR cycle below
+11. **Create a feature branch**: `feature/<short-name>`
+12. **For each task**, follow the RED-GREEN-REFACTOR cycle below
+13. **After all tasks complete**, launch `code-reviewer` agent for self-review:
+    - Reviewer checks correctness, idioms, safety, architecture
+    - Address any Critical or Important findings before committing
 
 ## The Cycle
 
@@ -105,7 +110,14 @@ Run: `cargo test`
 
 ### REFACTOR - Clean the Changed Code
 
-Once green, invoke `/refactor` on the changed code and its immediate boundaries.
+Once green, refactor the changed code and its immediate boundaries. Baby steps only:
+
+1. **Rename** — variables, functions, parameters to favor meaning
+2. **Extract function** — if a block does one identifiable thing
+3. **Inline** — remove unnecessary indirection
+4. **Replace magic values** — constants or named functions
+5. **Simplify conditionals** — `if let`, `match`, combinators
+6. **Remove duplication** — only if 3+ occurrences
 
 Run: `cargo test` after each refactor step — **must stay green**
 
@@ -131,19 +143,18 @@ For each task:
 - [ ] Confirm test fails (RED)
 - [ ] Write minimum code to pass
 - [ ] Confirm test passes (GREEN)
-- [ ] Run `/refactor` on changed code
+- [ ] Refactor changed code (baby steps, tests stay green)
 - [ ] Confirm tests still pass
 - [ ] `cargo clippy -- -D warnings`
 - [ ] Repeat for next behavior increment
 - [ ] All task behaviors covered
 - [ ] Update all affected documentation (`README.md`, `CLAUDE.md`, doc comments) to reflect changes
-- [ ] Commit with `/commit`
 
 ## Pipeline
 
 ```
-/po <prompt> -> GitHub issue -> /tdd <issue_url> -> /review -> /pr
-                     ^                |
-                     |                | (PRD feedback)
-                     +--- /po amend --+
+/po -> GitHub issue -> /dev -> /review -> /commit -> /pr
+         ^                |
+         |                | (PRD feedback)
+         +--- /po amend --+
 ```
